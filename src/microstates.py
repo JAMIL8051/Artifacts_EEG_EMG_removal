@@ -74,7 +74,10 @@ def segment(data, n_states=4, n_inits=10, max_iter=1000, thresh=1e-6,
 
     References
     ----------
-    .. [1] Pascual-Marqui, R. D., Michel, C. M., & Lehmann, D. (1995). Segmentation of brain electrical activity into microstates: model estimation and validation. IEEE Transactions on Biomedical Engineering.
+    .. [1] Pascual-Marqui, R. D., Michel, C. M., & Lehmann, D. (1995).
+           Segmentation of brain electrical activity into microstates: model
+           estimation and validation. IEEE Transactions on Biomedical
+           Engineering.
     """
     logger.info('Finding %d microstates, using %d random intitializations for the k-means algorithm' %
                 (n_states, n_inits))
