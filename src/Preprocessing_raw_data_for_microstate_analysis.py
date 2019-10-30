@@ -16,12 +16,12 @@ def preprocess_raw_data():
     filepath = get_raw_data_file_path()
     montage = preprocessor.load_biosemi_montage()
     raw = preprocessor.load_raw_data(filepath, montage)
-    raw.plot_psd(tmax = np.inf, fmax=500)
+    #raw.plot_psd(tmax = np.inf, fmax=500)
     
 # Resampling using pyprep package
-#   preprocessor.resample_raw_data(raw)    
+    nd = preprocessor.resample_raw_data(raw)
     
-#EOG
+#EOG detection phase
     average_eog = preprocessor.get_average_eog(raw)
     plotter.print_average_eog(average_eog)
     for i in range(64,72):
@@ -42,7 +42,7 @@ def preprocess_raw_data():
     plotter.print_ICA(ica, raw, eog_average, eog_inds, scores, eog_epochs, raw_copy)
     return raw
 
-raw = preprocess_raw_data()
+cleaned_raw_data = preprocess_raw_data()
 
 
 #
