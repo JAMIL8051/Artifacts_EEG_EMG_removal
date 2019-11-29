@@ -25,7 +25,7 @@ def print_ICA(ica, filtered_raw, eog_average, eog_epochs, eog_inds, scores, raw_
 
 # look at r scores of components and can see only one component highly correlated
 # and this one got detected by our correlation analysis(red)
-    ica.plot_score(scores, exclude=eog_inds)
+    ica.plot_scores(scores, exclude=eog_inds)
 
 # Looking at source time courses
     ica.plot_sources(eog_average, exclude=eog_inds)
@@ -72,6 +72,7 @@ def get_projections(projs, raw, eog_projs):
 def plot_demonstration_SSP_cleaning(epochs_no_proj, epochs_proj, evoked):
     epochs_no_proj.average().plot(spatial_colors= True, time_unit='s')
     epochs_proj.average().plot(spatial_colors= True, time_unit='s')
+
 # Plotting delayed SP mode and setting time  instances from 50ms to 200ms in a step of 10ms
     times = np.arange(0.05, 0.20, 0.01)
     fig = evoked.plot_topomap(times, proj='interactive', time_unit='s')

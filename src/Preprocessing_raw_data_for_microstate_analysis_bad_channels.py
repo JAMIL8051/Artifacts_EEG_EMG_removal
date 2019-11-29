@@ -4,8 +4,8 @@ import numpy as np
 import mne
 import EegPreprocessor as preprocessor
 #import eeg_visualizer as plotter
-#import microstates
-#import MicrostateAnalyzer as ms_analyze
+import microstates
+import MicrostateAnalyzer as ms_analyze
 
 #import EmpiricalModeDecomposition as emd
 #import pca_ica_gfp_freq_bands as analysis gfp_analysis
@@ -48,7 +48,7 @@ def preprocess_raw_data():
     print("Please give an end time in seconds for preprocessing of your data")
     tmax = int(input())
 
-    #raw.plot_psd(tmax = np.inf, fmax=500)
+    raw.plot_psd(tmax = np.inf, fmax=512)
 
 # Resampling using pyprep package
     nd, bads, channel_correlations, high_freq_noise_per_channel = preprocessor.resample_raw_data(raw, tmin, tmax)
@@ -78,6 +78,10 @@ raw, bads = preprocess_raw_data()
 
 
 
+
+for i in range(3):
+    maps_bad_channels, raw_pick_bad_channels = ms_analyze.bad_channel_analysis(raw,bads)
+    microstates.plot_maps(maps_bad_channels, raw_pick_bad_channels.info)
 
 
 

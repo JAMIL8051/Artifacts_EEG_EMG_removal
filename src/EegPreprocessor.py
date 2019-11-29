@@ -5,9 +5,13 @@ import numpy as np
 from pyprep.noisy import Noisydata
 from mne.preprocessing import create_eog_epochs, compute_proj_eog
 from mne.preprocessing import ICA, maxwell_filter
+
+    
 BIOSEMI_MACHINE_NAME = 'biosemi'
 DEFAULT_MONTAGE_MACHINE = BIOSEMI_MACHINE_NAME + '64'
 DEFAULT_EOG = ['EXG1', 'EXG2', 'EXG3', 'EXG4', 'EXG5', 'EXG6', 'EXG7', 'EXG8']
+  
+
 
 #Loading channel position
 def load_montage(channel_names,
@@ -19,12 +23,14 @@ def load_montage(channel_names,
         kind, channel_names, channel_file_path, unit, transform)
     return montage
 
-#Channel position function for Biosemi machine
+#Biosemi Montage
 def load_biosemi_montage(biosemi_channel_count=64):
     montage = mne.channels.read_montage('biosemi64')
     return montage
 
-#Loading the rwa data 
+
+
+#Loading the raw data
 def load_raw_data(filepath, montage, eog=DEFAULT_EOG):
     raw = mne.io.read_raw_edf(filepath, montage, eog)
     return raw
@@ -45,31 +51,38 @@ def find_eog_artifacts(raw, event_id):
 
 
 #Resampling of the raw data
-def resample_raw_data(raw):
-    decim = 3
+def resample_raw_data(raw, tmin, tmax):
+    #decim = 3
     #data = raw.get_data()
     #data = np.resize(data, (64, 30000))
     #raw1 = mne.filter.resample(data, up=decim, npad='auto')
-
-    ex = 10
+    #ex = 10
     ##
     # Raw mne object is assigned and stored in a copy
-    try:
-        raw.load_data()
-        nd = Noisydata(raw)
+    #try:
+    raw.crop(tmin, tmax).load_data()
+    
+# band-pass filtering in the range 1 Hz - 50 Hz
+    raw.filter(1, 50., fir_design='firwin')
+    raw.resample(200, npad="auto")  # set sampling frequency to 100Hz
+    nd = Noisydata(raw)
 
-    except Exception as e:
-        ex = e
+    #except Exception as e:
+        #ex = e
+
     # Finding all bad channels and getting a summary
     nd.find_all_bads()
     bads = nd.get_bads(verbose=True)
-    ##
-    # Bad channels are in bads so we can process the raw object
-    # We can check channel correlations
-    nd._channel_correlations
-    # Checking high noise frequency per channel
-    nd._channel_hf_noise
-    return nd
+
+# Bad channels are in bads so we can process the raw object
+# We can check channel correlations
+    channel_correlations = nd._channel_correlations
+
+# Checking high noise frequency per channel
+    high_freq_noise_per_channel = nd._channel_hf_noise
+    return nd, bads, high_freq_noise_per_channel, channel_correlations
+
+
 
 # Compute SSP projections for EOG
 def compute_SSP_projection_eog(raw):
@@ -80,29 +93,32 @@ def compute_SSP_projection_eog(raw):
 
 def apply_SSP_projections(raw, eog_projs):
     raw.info['projs'] += eog_projs
-
+    raw_SSP = raw
+    return raw_SSP
 
 def demonstrate_SSP_cleaning(raw):
-    events = mne.find_events(raw, stim_channel=raw.ch_names[-1])
-    reject = dict(eeg=10e-6, eog=150e6)
-    # This is highly data dependent
-    event_id = 10542
-#    epochs_no_proj = mne.Epochs(raw, events, event_id, tmin=-0.2,
-#                                tmax=0.5, proj=False, reject=reject)
-#    epochs_proj = mne.Epochs(raw, events, event_id, tmin=-0.2,
-#                             tmax=0.5, proj=True, reject=reject)
+    events = mne.find_events(raw, stim_channel = raw.ch_names[-1])
+    reject = dict(eeg=10e-6, eog =150e-6)
+    
+# This is highly data dependent
+    event_ids = events[:,[2]]
+    event_ids = event_ids.transpose()
+    event_ids = event_ids.tolist()
+    event_id = event_ids[0]
+    
+    epochs_no_proj = mne.Epochs(raw, events, event_id, tmin=-0.2,
+                                tmax=0.5, proj=False, baseline = (None, 0), reject=reject)
+    epochs_proj = mne.Epochs(raw, events, event_id, tmin=-0.2,
+                             tmax=0.5, proj=True, baseline = (None, 0), reject=reject)
     evoked = mne.Epochs(raw, events, event_id, tmin=-0.2, tmax=0.5,
-                        proj='delayed', reject=reject).average()
-    return epochs_no_proj, epochs_proj, evoked, events
+                        proj='delayed', baseline = (None, 0), reject=reject).average()
+    return epochs_no_proj, epochs_proj, evoked
 
 
 #Create EOG epochs from raw data and then averages
 def get_average_eog(raw):
     average_eog = create_eog_epochs(raw).average()
     return average_eog
-
-
-
 
 
 #Application of ICA to raw data
@@ -124,11 +140,11 @@ def apply_ICA(raw):
     random_state = 60
 
 # Defining ICA intance object
-    ica_with_artifacts = ICA(n_components=n_components,
+    ica_instance = ICA(n_components=n_components,
                              method=method, random_state=random_state)
-    reject = dict(eeg=10e-5)
-    ica = ica_with_artifacts.fit(
-        raw, picks=picks_eeg, decim=decim, reject=reject)
+    reject = dict(eeg =  10e-5)
+    ica = ica_instance.fit(raw, picks=picks_eeg, decim=decim, 
+                                 reject=reject)
 
 # Get single EOG trials
     eog_epochs, eog_average = create_average_eog_epochs(raw)
@@ -145,7 +161,7 @@ def apply_ICA(raw):
 #Advanced and efficient way for artifact detection 
 def create_average_eog_epochs(raw):
     reject = dict(eeg=10e-6)
-    picks_eeg = mne.pick_types(raw.info, meg=False, eeg=True, eog=False,
+    picks_eeg = mne.pick_types(raw.info, eeg=True, eog=False,
                                stim=False, exclude='bads')
 
     eog_average = create_eog_epochs(raw, reject=dict(eeg=10e-6), picks=picks_eeg).average()
