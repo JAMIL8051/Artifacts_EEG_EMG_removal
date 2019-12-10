@@ -63,7 +63,7 @@ def resample_raw_data(raw, tmin, tmax):
     raw.crop(tmin, tmax).load_data()
     
 # band-pass filtering in the range 1 Hz - 50 Hz
-    raw.filter(1, 50., fir_design='firwin')
+    raw.filter(1, 20., fir_design='firwin')
     raw.resample(200, npad="auto")  # set sampling frequency to 100Hz
     nd = Noisydata(raw)
 

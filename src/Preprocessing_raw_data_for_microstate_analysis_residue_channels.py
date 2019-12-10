@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import filedialog
-import numpy as np
 import mne
 import EegPreprocessor as preprocessor
 #import eeg_visualizer as plotter
@@ -52,8 +51,9 @@ def preprocess_raw_data():
 
 # Resampling using pyprep package
     nd, bads, channel_correlations, high_freq_noise_per_channel = preprocessor.resample_raw_data(raw, tmin, tmax)
-    return raw, bads    
+    return raw, bads
+    
 raw, bads = preprocess_raw_data()
 
-maps_residue, raw_residue = ms_analyze.residue_analysis(raw,bads,tmin=0,tmax=50)
+maps_residue, raw_residue = ms_analyze.residue_analysis(raw,bads,tmin=0,tmax=54)
 microstates.plot_maps(maps_residue, info = raw_residue.info)

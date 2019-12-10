@@ -26,7 +26,7 @@ def residue_analysis(raw, bads, tmin,tmax):
     data_residue = raw_residue.crop(tmin,tmax).load_data()
     # EEG microstates analysis
     data_residue = data_residue.get_data()
-    data_residue = np.resize(data_residue, (62, 10800))
+    data_residue = np.resize(data_residue, (30, 10800))
 
     n_states_residue = int(input("Please provide the number of Microstates: "))
     if n_states_residue < 2:
