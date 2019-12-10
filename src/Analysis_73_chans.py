@@ -94,9 +94,17 @@ def read_edf(filename):
            header['samples_per_record'][0]/header['duration'],\
            data
 channelData = read_edf('C:/projects/eeg_microstates/src/test.edf')
+
+
 data = channelData[2]
 n_maps = 4
 maps, L_, gfp_peaks, gev,cv = testing.kmeans(data, n_maps, n_runs = 5,maxerr = 1e-6, maxiter = 200 )
+
+
+
+
+
+
 
 
 #for i in range(1):

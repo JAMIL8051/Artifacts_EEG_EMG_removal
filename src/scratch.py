@@ -65,7 +65,7 @@ def topo(data, n_grid=64):
         data_interpol: cubic interpolation of EEG topography, n_grid x n_grid
                        contains nan values
     """
-    channels, locs = read_xyz('cap.xyz')
+    channels, locs = read_xyz('biosemi64.xyz')
     n_channels = len(channels)
     #locs /= np.sqrt(np.sum(locs**2,axis=1))[:,np.newaxis]
     locs /= np.linalg.norm(locs, 2, axis=1, keepdims=True)
