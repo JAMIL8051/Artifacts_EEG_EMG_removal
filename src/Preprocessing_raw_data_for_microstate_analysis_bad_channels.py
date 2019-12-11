@@ -5,7 +5,7 @@ import mne
 import EegPreprocessor as preprocessor
 #import eeg_visualizer as plotter
 import microstates
-import MicrostateAnalyzer as ms_analyze
+import scratch
 
 #import EmpiricalModeDecomposition as emd
 #import pca_ica_gfp_freq_bands as analysis gfp_analysis
@@ -42,13 +42,13 @@ def preprocess_raw_data():
 #Using the average EEG reference
     raw.set_eeg_reference('average')
 #High pass filtering of data
-    raw.filter(0.2, None)
+    raw.filter(1., None)
     print("Please give a start time in seconds for preprocessing of your data")
     tmin = int(input())
     print("Please give an end time in seconds for preprocessing of your data")
     tmax = int(input())
 
-    raw.plot_psd(tmax = np.inf, fmax=512)
+    #raw.plot_psd(tmax = np.inf, fmax=512)
 
 # Resampling using pyprep package
     nd, bads, channel_correlations, high_freq_noise_per_channel = preprocessor.resample_raw_data(raw, tmin, tmax)
@@ -77,39 +77,28 @@ def preprocess_raw_data():
 raw, bads = preprocess_raw_data()
 
 
-
-
-for i in range(3):
-    maps_bad_channels, raw_pick_bad_channels = ms_analyze.bad_channel_analysis(raw,bads)
-    microstates.plot_maps(maps_bad_channels, raw_pick_bad_channels.info)
-
-
-
-
-
-
-
-#raw = preprocess_raw_data()
-
-#raw_copy1 = raw
-#raw_copy2 = raw
+raw_copy1 = raw.copy()
+raw_copy2 = raw.copy()
 
 ## Formation of raw instance with bad_channels on the basis of Pyprep 
-#bad_channels = bads
-#raw_pick_bad_channels = raw_copy1.pick_channels(ch_names = bad_channels)
+bad_channels = bads
+raw_pick_bad_channels = raw_copy1.pick_channels(ch_names = bad_channels)
 
 ##EEG microstates analysis on bad_data
-#data_bad_channels = raw_pick_bad_channels.get_data()
-#data_bad_channels = np.resize(data_bad_channels,(4, 10800))
+data_bad_channels = raw_pick_bad_channels.get_data()
+data_bad_channels = np.resize(data_bad_channels,(len(bads),len(data_bad_channels.transpose())))
 
 #n_states_bad_channel = int(input("Please provide the number of Microstates: "))
 #if n_states_bad_channel <2 :
     #print("The number of microstates must be equal greater than or equal to 2" )
 #n_inits_bad_channel = int(input("Please give the number of random initializations to use for the k-means algorithm: "))
 #maps_bad_channels, segmentation_bad_channels = microstates.segment(data_bad_channels, n_states= n_states_bad_channel, n_inits = n_inits_bad_channel)
-#microstates.plot_maps(maps_bad_channels, raw_pick_bad_channels.info)
-#
-#
+#n_maps = 4
+#maps, L_, gfp_peaks, gev,cv = scratch.kmeans(data_bad_channels, n_maps, n_runs = 5,maxerr = 1e-6, maxiter = 200, doplot = False )
+#microstates.plot_maps(maps, info = raw_pick_bad_channels.info)
+
+
+
 ##Formation of the residue raw instance/object
 #raw_residue= raw_copy2.drop_channels(ch_names = bad_channels) 
 #

@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import cmath
 from scipy.interpolate import griddata
+
 
 def read_xyz(filename):
     """Read EEG electrode locations in xyz format
@@ -23,6 +23,7 @@ def read_xyz(filename):
             else:
                 l = None
     return ch_names, np.array(locs)
+
 
 def findstr(s, L):
     """Find string in list of strings, returns indices.
@@ -53,8 +54,6 @@ def locmax(x):
     return m
 
 
-
-
 def topo(data, n_grid=64):
     """Interpolate EEG topography onto a regularly spaced grid
 
@@ -65,7 +64,7 @@ def topo(data, n_grid=64):
         data_interpol: cubic interpolation of EEG topography, n_grid x n_grid
                        contains nan values
     """
-    channels, locs = read_xyz('biosemi64.xyz')
+    channels, locs = read_xyz('cap.xyz')
     n_channels = len(channels)
     #locs /= np.sqrt(np.sum(locs**2,axis=1))[:,np.newaxis]
     locs /= np.linalg.norm(locs, 2, axis=1, keepdims=True)
@@ -75,7 +74,6 @@ def topo(data, n_grid=64):
     w = np.linalg.norm(locs - locs[c], 2, axis=1)
     #arclen = 2*np.arcsin(w/2)
     arclen = np.arcsin(w / 2. * np.sqrt(4. - w * w))
-    
     it1 = locs[:,0] - locs[c][0]
     it2 = locs[:,1] - locs[c][1]
     mapped = map(complex, it1, it2)
@@ -90,9 +88,8 @@ def topo(data, n_grid=64):
     return data_ip
 
 
-
 def eeg2map(data):
-    """Interpolate and normalize EEG topography, ignoring nan values
+    """Interpolate and normalize EEG topography, ignoring not a number(nan) values
 
     Args:
         data: numpy.array, size = number of EEG channels
@@ -106,8 +103,6 @@ def eeg2map(data):
     mx = np.nanmax(top)
     top_norm = (top-mn)/(mx-mn)
     return top_norm
-
-
 
 
 def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500, doplot=True):
@@ -124,8 +119,8 @@ def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500, doplot=True):
 #gfp_peaks: indices of local GFP maxima
 #gev: global explained varience (0..1)
 #cv: value of the cross-validation criterion
-    n_time_samples = data.shape[0]
-    n_channels = data.shape[1]
+    n_time_samples = data.shape[1]
+    n_channels = data.shape[0]
     data = data - data.mean(axis =1, keepdims = True)
 
     #Global field power peaks(GFP peaks)

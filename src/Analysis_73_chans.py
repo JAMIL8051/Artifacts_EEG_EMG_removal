@@ -12,7 +12,7 @@ import microstates
 #import mara as mara1
 import scratch as testing
 import argparse, os, sys, time
-
+from matplotlib import pyplot as plt
 
 def read_edf(filename):
     """Basic EDF file format reader
@@ -97,8 +97,15 @@ channelData = read_edf('C:/projects/eeg_microstates/src/test.edf')
 
 
 data = channelData[2]
-n_maps = 4
-maps, L_, gfp_peaks, gev,cv = testing.kmeans(data, n_maps, n_runs = 5,maxerr = 1e-6, maxiter = 200 )
+n_maps = 6
+maps, L_, gfp_peaks, gev,cv = testing.kmeans(data, n_maps, n_runs = 10,maxerr = 1e-6, maxiter = 500, doplot = False )
+
+channels, locs = testing.read_xyz('cap.xyz')
+
+for i, map in enumerate(maps):
+    plt.figure(figsize=(6* len(maps),6))
+    #plt.subplot(1, len(maps), i+1)
+    mne.viz.plot_topomap(map, pos = locs[:, :2])
 
 
 

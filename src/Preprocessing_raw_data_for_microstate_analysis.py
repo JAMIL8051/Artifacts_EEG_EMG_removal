@@ -6,13 +6,13 @@ import EegPreprocessor as preprocessor
 #import eeg_visualizer as plotter
 import microstates
 #import MicrostateAnalyzer as ms_analyze
-
+import scratch
 #import EmpiricalModeDecomposition as emd
 #import pca_ica_gfp_freq_bands as analysis gfp_analysis
 #import mara as mara1
-from itertools import combinations, permutations
+from itertools import combinations
     
-for i in range(2):
+for i in range(1):
     print(__doc__)
     
     
@@ -76,14 +76,14 @@ for i in range(2):
 #    print(ica)
 #    plotter.print_ICA(ica, raw, eog_average, eog_inds, scores, eog_epochs, raw_copy)
 #    return nd, bads, high_freq_noise_per_channel, channel_correlations, evoked 
-        return raw, bads, nd    
-    raw, bads, nd = preprocess_raw_data()
+        return raw, bads    
+    raw, bads = preprocess_raw_data()
         
 
 #raw = preprocess_raw_data()
 
     raw_copy1 = raw.copy()
-    raw_copy2 = raw.copy()
+    #raw_copy2 = raw.copy()
 
 
 ## Formation of raw instance with bad_channels on the basis of Pyprep 
@@ -95,41 +95,44 @@ for i in range(2):
     data_bad_channels_tr = data_bad_channels.transpose()
     data_bad_channels = np.resize(data_bad_channels,(len(bad_channels),len(data_bad_channels_tr)))
 
-    print("EEG microstate analysis for bad channels from PyPrep")
-
-    for i in range(2):
-        n_states_bad_channel = int(input("Please provide the number of Microstates: "))
-        if n_states_bad_channel <2 :
-            print("The number of microstates must be equal greater than or equal to 2" )
-        n_inits_bad_channel = int(input("Please give the number of random initializations to use for the k-means algorithm: "))
-        maps_bad_channels, segmentation_bad_channels = microstates.segment(data_bad_channels, n_states= n_states_bad_channel, n_inits = n_inits_bad_channel)
-        microstates.plot_maps(maps_bad_channels, raw_pick_bad_channels.info)
+    print("Ready for EEG microstate analysis for bad channels from PyPrep")
+#
+    #for i in range(1):
+    #    n_states_bad_channel = int(input("Please provide the number of Microstates: "))
+    #    if n_states_bad_channel <2 :
+#            print("The number of microstates must be equal greater than or equal to 2" )
+#        n_inits_bad_channel = int(input("Please give the number of random initializations to use for the k-means algorithm: "))
+#        maps_bad_channels, segmentation_bad_channels = microstates.segment(data_bad_channels, n_states= n_states_bad_channel, n_inits = n_inits_bad_channel)
+#        microstates.plot_maps(maps_bad_channels, raw_pick_bad_channels.info)
     
 ##Formation of the residue raw instance/object
-    raw_residue= raw_copy2.drop_channels(ch_names = bad_channels)
+#    raw_residue= raw_copy2.drop_channels(ch_names = bad_channels)
     
 ##Segementation of raw_residue to chunks
-    residue_channels = raw_residue.ch_names
-    perm_residue_channel = combinations(residue_channels, len(bads))
-    perm_residue_channels = list(perm_residue_channel)
-    for i in range(int(len(perm_residue_channels)/32)):
-        raw_chunks = raw_residue.copy()
-        raw_chunk = raw_chunks.pick_channels(ch_names = perm_residue_channels[i]) 
-
+#    residue_channels = raw_residue.ch_names
+#    comb_residue_channel = combinations(residue_channels, len(bads))
+#    comb_residue_channels = list(comb_residue_channel)
+#    for i in range(2):
+#        raw_chunks = raw_residue.copy()
+#        raw_chunk = raw_chunks.pick_channels(ch_names = list(comb_residue_channels[i])) 
+#        info = raw_chunk.info
 ##EEG microstates analysis
-        data_residue = raw_chunk.get_data()
-        data_residue_tr = data_residue.transpose()
-        data_residue = np.resize(data_residue,(len(bads), len(data_residue_tr)))
-        
-        print("EEG microstate analysis for rest of the channels from PyPrep")
+#        data_residue = raw_chunk.get_data()
+#        data_residue_tr = data_residue.transpose()
+#        data_residue = np.resize(data_residue,(len(bads), len(data_residue_tr)))
+#        
+#        print("EEG microstate analysis for rest of the channels from PyPrep")
+#        n_maps = 4
+#        maps, L_, gfp_peaks, gev,cv = scratch.kmeans(data_residue, n_maps, n_runs = 5,maxerr = 1e-6, maxiter = 200, doplot = False )
+#        microstates.plot_maps (maps,info)
     
-        for i in range(1):
+        #for i in range(1):
 #            n_states_residue = int(input("Please provide the number of Microstates: "))
 #            if n_states_residue <2 :
 #               print("The number of microstates must be equal greater than or equal to 2" )
 #            n_inits_residue = int(input("Please give the number of random initializations to use for the k-means algorithm: "))
-            maps_residue, segmentation_residue = microstates.segment(data_residue, n_states= 4, n_inits = 300)
-            microstates.plot_maps(maps_residue, raw_chunk.info)
+            #maps_residue, segmentation_residue = microstates.segment(data_residue, n_states= 4, n_inits = 300)
+            #microstates.plot_maps(maps_residue, raw_chunk.info)
 
 
 #data1 = raw.get_data()

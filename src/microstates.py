@@ -268,10 +268,11 @@ def plot_maps(maps, info):
         sensors.
     """
     
-    plt.figure(figsize=(2* len(maps), 2))
+    
     layout = mne.channels.find_layout(info)
+    a = layout.pos[:, :2]
     for i, map in enumerate(maps):
-        
+        plt.figure(figsize=(6* len(maps), 6))
         plt.subplot(1, len(maps), i+1)
         mne.viz.plot_topomap(map, layout.pos[:, :2])
 #        plt.title('%d' % i)
