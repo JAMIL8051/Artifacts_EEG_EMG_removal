@@ -1,5 +1,4 @@
-import math
-import scipy
+import scipy.linalg as la
 import scipy.spatial.distance as dist
 from scipy.stats import multivariate_normal, pearsonr, f_oneway
 import numpy as np
@@ -20,31 +19,66 @@ import pandas as pd
 
 
 #Step1: Importing EDF data files
-chs, fs, data_raw = testing.read_edf("test.edf") 
-chs_bads, fs_bads, data_raw_bads = testing.read_edf('C:/projects/eeg_microstates/src/2019-05-03-suject-01-192sec_bad.edf')
-chs_grp1, fs_grp1, data_raw_grp1 = testing.read_edf('C:/projects/eeg_microstates/src/2019-05-03-suject-01-Channel_grp1_6sec.edf')
-chs_grp2, fs_grp2, data_raw_grp2 = testing.read_edf('C:/projects/eeg_microstates/src/2019-05-03-suject-01-Channel_grp2_6sec.edf')
+#chs, fs, data_raw = testing.read_edf("test.edf") 
+chs_bads, fs_bads, data_raw_bads = testing.read_edf('C:/projects/eeg_microstates/src/2019-05-03-suject-01-bad_ch_192sec.edf')
+chs_grp1, fs_grp1, data_raw_grp1 = testing.read_edf('C:/projects/eeg_microstates/src/2019-05-03-suject-01-ch_grp1_192sec.edf')
+#chs_grp2, fs_grp2, data_raw_grp2 = testing.read_edf('C:/projects/eeg_microstates/src/2019-05-03-suject-01-ch_grp2_192sec.edf')
 
 #Band pass filtering
-data = testing.bp_filter(data_raw, 1, 35, fs) 
+#data = testing.bp_filter(data_raw, 1, 35, fs) 
 data_bads = testing.bp_filter(data_raw_bads, 1, 35, fs_bads)
 data_grp1 = testing.bp_filter(data_raw_grp1, 1, 35, fs_grp1)
-data_grp2 = testing.bp_filter(data_raw_grp2, 1, 35, fs_grp2)
+#data_grp2 = testing.bp_filter(data_raw_grp2, 1, 80, fs_grp2)
 
 # Optimal No. of microstate clusters or maps 4 or 6
 n_maps = 6
 
 # Modified k-means algorithm
-maps, x, gpf_peaks, gev, cv =testing.kmeans(data,n_maps,n_runs =10, maxerr=10e-6,maxiter=500)
+#maps, x, gpf_peaks, gev, cv =testing.kmeans(data,n_maps,n_runs =10, maxerr=1e-6,maxiter=500)
 maps_bads, x_bads, gfp_peaks_bads, gev_bads, cv_bads = testing.kmeans(data_bads, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
 maps_grp1, x_grp1, gfp_peaks_grp1, gev_grp1, cv_grp1 = testing.kmeans(data_grp1, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
-maps_grp2, x_grp2, gfp_peaks_grp2, gev_grp2, cv_grp2 = testing.kmeans(data_grp2, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
+#maps_grp2, x_grp2, gfp_peaks_grp2, gev_grp2, cv_grp2 = testing.kmeans(data_grp2, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
 print('\n\t Microstate Analysis succesful')
+
+# Formation 
+
+h = np.reshape(maps_bads[0],(10,1))
+g = np.reshape(maps_bads[0],(1,10))
+print(g)
+print("2nd one")
+print(maps_bads[0])
+result = np.matmul(h,g)
+result1 = np.matmul(np.reshape(maps_grp1[0],(10,1)), np.reshape(maps_grp1[0],(1,10)))
+print(result)
+
+# Application of PCA
+testing.pca_app(result)
+
+testing.rcanonical(result, result1)
+
+
+
+eigvals, eigvecs = la.eig(result)
+print("\tEigen values with scipy")
+print(eigvals)
+print("\tEigen vectors with scipy")
+print(eigvecs)
+
+print("NOW WITH numpy")
+w,v = np.linalg.eig(maps_bads1)
+print("EIGEN values with numpy")
+print(w)
+print("Eigen vectors with numpy")
+print(v)
+print("OKAY")
+
+
+
 
 #Calculation of GEV for each groups on basis of gfp peaks:
 #Basic statistics
 #GEV: Global explained varience:
-total_gev = gev.sum()
+#total_gev = gev.sum()
 total_gev_bads = gev_bads.sum()
 total_gev_grp1 = gev_grp1.sum()
 total_gev_grp2 = gev_grp2.sum()
@@ -63,6 +97,11 @@ print("GFP peaks per second for bad channels group: {:.2f}".format(pps_bads))
 pps_grp1 = len(gfp_peaks_grp1)/(len(x_grp1)/fs_grp1)
 print("GFP peaks per second for channels group 1: {:.2f}".format(pps_grp1))
 pps_ch_grp2 = len(gfp_peaks_grp2)/(len(x_grp2)/fs_grp2)
+
+#Finding the angle between maps of two groups:
+for i in range(0,n_maps):    
+    cos_theta = testing.angle(maps_bads[i], maps_grp1[i])
+    print(cos_theta)
 
 
 #Class wise 1 factor(1 way) Topographic ANOVA(TANOVA)
@@ -210,6 +249,12 @@ for i in range(0,n_maps):
 
 cosine_similarity = sklearn.metrics.pairwise.cosine_similarity(maps_bads,maps_grp1)
 print(cosine_similarity)
+
+testing.check_colinearity(maps_bads, maps_grp1)
+testing.oneway_anova(maps_bads, maps_grp1, maps_grp2)
+
+print('\t\t\tUpto 18th Feb 2020')
+
 
 #Printing the microstates classes
 #channels, locs = testing.read_xyz('cap.xyz')

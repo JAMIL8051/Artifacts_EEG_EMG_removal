@@ -51,20 +51,20 @@ def find_eog_artifacts(raw, event_id):
 
 
 #Resampling of the raw data
-def resample_raw_data(raw, tmin, tmax):
+def resample_raw_data(raw, tmin = 0, tmax = 190):
     #decim = 3
     #data = raw.get_data()
     #data = np.resize(data, (64, 30000))
     #raw1 = mne.filter.resample(data, up=decim, npad='auto')
     #ex = 10
-    ##
+    
     # Raw mne object is assigned and stored in a copy
     #try:
     raw.crop(tmin, tmax).load_data()
     
 # band-pass filtering in the range 1 Hz - 50 Hz
     raw.filter(1, 20., fir_design='firwin')
-    raw.resample(200, npad="auto")  # set sampling frequency to 100Hz
+    raw.resample(200, npad="auto")  # set sampling frequency to 200Hz
     nd = Noisydata(raw)
 
     #except Exception as e:

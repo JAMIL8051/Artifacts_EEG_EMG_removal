@@ -43,15 +43,12 @@ def preprocess_raw_data():
     raw.set_eeg_reference('average')
 #High pass filtering of data
     raw.filter(1., None)
-    print("Please give a start time in seconds for preprocessing of your data")
-    tmin = int(input())
-    print("Please give an end time in seconds for preprocessing of your data")
-    tmax = int(input())
+    
 
     #raw.plot_psd(tmax = np.inf, fmax=512)
 
 # Resampling using pyprep package
-    nd, bads, channel_correlations, high_freq_noise_per_channel = preprocessor.resample_raw_data(raw, tmin, tmax)
+    nd, bads, channel_correlations, high_freq_noise_per_channel = preprocessor.resample_raw_data(raw)
 
 ##EOG detection phase
 #    average_eog = preprocessor.get_average_eog(raw)

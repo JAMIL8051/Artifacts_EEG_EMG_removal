@@ -1,16 +1,108 @@
+import math
+import argparse, os, sys, time
 import numpy as np
+import rcca
 import matplotlib.pyplot as plt
+from palettable.colorbrewer import qualitative
 from scipy.interpolate import griddata
+from scipy.signal import butter, filtfilt, welch
+import scipy.stats
+import pandas as pd
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+from sklearn.cross_decomposition import CCA
+from sklearn.decomposition import PCA
+ 
 
 
-def read_xyz(filename):
-    """Read EEG electrode locations in xyz format
+def read_edf(filename):
+    """Basic EDF file format reader
+
+    EDF specifications: http://www.edfplus.info/specs/edf.html
 
     Args:
-        filename: full path to the '.xyz' file
+        filename: full path to the '.edf' file
     Returns:
-        locs: n_channels x 3 (numpy.array)
+        chs: list of channel names
+        fs: sampling frequency in [Hz]
+        data: EEG data as numpy.array (samples x channels)
     """
+
+    def readn(n):
+        """read n bytes."""
+        return np.fromfile(fp, sep='', dtype=np.int8, count=n)
+
+    def bytestr(bytes, i):
+        """convert byte array to string."""
+        return np.array([bytes[k] for k in range(i*8, (i+1)*8)]).tostring()
+
+    fp = open(filename, 'r')
+    x = np.fromfile(fp, sep='', dtype=np.uint8, count=256).tostring()
+    header = {}
+    header['version'] = x[0:8]
+    header['patientID'] = x[8:88]
+    header['recordingID'] = x[88:168]
+    header['startdate'] = x[168:176]
+    header['starttime'] = x[176:184]
+    header['length'] = int(x[184:192]) # header length (bytes)
+    header['reserved'] = x[192:236]
+    header['records'] = int(x[236:244]) # number of records
+    header['duration'] = float(x[244:252]) # duration of each record [sec]
+    header['channels'] = int(x[252:256]) # ns - number of signals
+    n_ch = header['channels']  # number of EEG channels
+    header['channelname'] = (readn(16*n_ch)).tostring()
+    header['transducer'] = (readn(80*n_ch)).tostring().split()
+    header['physdime'] = (readn(8*n_ch)).tostring().split()
+    header['physmin'] = []
+    b = readn(8*n_ch)
+    for i in range(n_ch): header['physmin'].append(float(bytestr(b, i)))
+    header['physmax'] = []
+    b = readn(8*n_ch)
+    for i in range(n_ch): header['physmax'].append(float(bytestr(b, i)))
+    header['digimin'] = []
+    b = readn(8*n_ch)
+    for i in range(n_ch): header['digimin'].append(int(bytestr(b, i)))
+    header['digimax'] = []
+    b = readn(8*n_ch)
+    for i in range(n_ch): header['digimax'].append(int(bytestr(b, i)))
+    header['prefilt'] = (readn(80*n_ch)).tostring().split()
+    header['samples_per_record'] = []
+    b = readn(8*n_ch)
+    for i in range(n_ch): header['samples_per_record'].append(float(bytestr(b, i)))
+    nr = header['records']
+    n_per_rec = int(header['samples_per_record'][0])
+    n_total = int(nr*n_per_rec*n_ch)
+    fp.seek(header['length'],os.SEEK_SET)  # header end = data start
+    data = np.fromfile(fp, sep='', dtype=np.int16, count=n_total)  # count=-1
+    fp.close()
+
+    # re-order
+    data = np.reshape(data,(n_per_rec,n_ch,nr),order='F')
+    data = np.transpose(data,(0,2,1))
+    data = np.reshape(data,(n_per_rec*nr,n_ch),order='F')
+
+    # convert to physical dimensions
+    for k in range(data.shape[1]):
+        d_min = float(header['digimin'][k])
+        d_max = float(header['digimax'][k])
+        p_min = float(header['physmin'][k])
+        p_max = float(header['physmax'][k])
+        if ((d_max-d_min) > 0):
+            data[:,k] = p_min+(data[:,k]-d_min)/(d_max-d_min)*(p_max-p_min)
+
+    print(header)
+    return header['channelname'].split(),\
+           header['samples_per_record'][0]/header['duration'],\
+           data
+
+def read_xyz(filename):
+#    """Read EEG electrode locations in xyz format
+#
+#    Args:
+#        filename: full path to the '.xyz' file
+#    Returns:
+#        locs: n_channels x 3 (numpy.array)
+#    """
     ch_names = []
     locs = []
     with open(filename, 'r') as f:
@@ -23,22 +115,22 @@ def read_xyz(filename):
             else:
                 l = None
     return ch_names, np.array(locs)
-
-
+#
+#
 def findstr(s, L):
-    """Find string in list of strings, returns indices.
-
-    Args:
-        s: query string
-        L: list of strings to search
-    Returns:
-        x: list of indices where s is found in L
-    """
-
+#    """Find string in list of strings, returns indices.
+#
+#    Args:
+#        s: query string
+#        L: list of strings to search
+#    Returns:
+#        x: list of indices where s is found in L
+#    """
+#
     x = [i for i, l in enumerate(L) if (l==s)]
     return x
-
-
+#
+#
 def locmax(x):
     """Get local maxima of 1D-array
 
@@ -52,6 +144,27 @@ def locmax(x):
     zc = np.diff(np.sign(dx)) # zero-crossings of dx
     m = 1 + np.where(zc == -2)[0] # indices of local max.
     return m
+
+def bp_filter(data, f_lo,f_hi, fs):
+    """Digital 6th order butterworth band pass filter
+     Args:
+        data: numpy.array, time along axis 0
+        (f_lo, f_hi): frequency band to extract [Hz]
+        fs: sampling frequency [Hz]
+    Returns:
+        data_filt: band-pass filtered data, same shape as data
+    """
+    data_filt = np.zeros_like(data)
+    f_ny = fs/2.  # Nyquist frequency
+    b_lo = f_lo/f_ny  # normalized frequency [0..1]
+    b_hi = f_hi/f_ny  # normalized frequency [0..1]
+    p_lp = {"N":6, "Wn":b_hi, "btype":"lowpass", "analog":False, "output":"ba"}
+    p_hp = {"N":6, "Wn":b_lo, "btype":"highpass", "analog":False, "output":"ba"}
+    bp_b1, bp_a1 = butter(**p_lp)
+    bp_b2, bp_a2 = butter(**p_hp)
+    data_filt = filtfilt(bp_b1, bp_a1, data, axis=0)
+    data_filt = filtfilt(bp_b2, bp_a2, data_filt, axis=0)
+    return data_filt
 
 
 def topo(data, n_grid=64):
@@ -105,7 +218,7 @@ def eeg2map(data):
     return top_norm
 
 
-def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500, doplot=True):
+def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500):
 #Arguments
 #data is numpy array size = no of EEG channels
 #n_maps is no of microstate maps
@@ -113,14 +226,16 @@ def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500, doplot=True):
 #maxerr: maximum error of convergence(optional)
 #maxiter: maximum number of iterations (optional)
 #doplot is plot results, default false(optional)
+
 #returns:
 # maps: microstate map (no.  of maps x no.  of channels)
-#L: sequence of microstate labesls
+#L: sequence of microstate labels
 #gfp_peaks: indices of local GFP maxima
 #gev: global explained varience (0..1)
 #cv: value of the cross-validation criterion
-    n_time_samples = data.shape[1]
-    n_channels = data.shape[0]
+    
+    n_time_samples = data.shape[0]
+    n_channels = data.shape[1]
     data = data - data.mean(axis =1, keepdims = True)
 
     #Global field power peaks(GFP peaks)
@@ -133,6 +248,7 @@ def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500, doplot=True):
     #clustering of GFP peak maps only
     V = data[gfp_peaks, :]
     sumV2 = np.sum(V ** 2)
+    #sumV2 = np.dot(V.T,V)
 
 #Storing results for each k-means run
     cv_list = [] # cross-validation criterion for each k-means run
@@ -142,6 +258,8 @@ def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500, doplot=True):
     L_list = [] # microstate label sequence for each k-means run
 
     for run in range(n_runs):
+        print(run)
+
         #initialize random cluster centroids (indices with respect to n_gfp)
         rndi = np.random.permutation(n_gfp)[:n_maps]
         maps = V[rndi, :]
@@ -168,6 +286,7 @@ def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500, doplot=True):
                  evals, evecs = np.linalg.eig(Sk)
                  v = evecs[:, np.argmax(np.abs(evals))]
                  maps[k,:] = v / np.sqrt(np.sum(v ** 2))
+                 
             #Step 5
             var1 = var0
             var0 = sumV2 - np.sum(np.sum(maps[L,:] * V, axis=1) ** 2)
@@ -209,59 +328,261 @@ def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500, doplot=True):
             gev = gev_list[k_opt]
             L_ = L_list[k_opt]
             
-            if doplot:
-                plt.ion()
-                # matplotlib's perceptually uniform sequential colormaps:
-                # magma, infermo, plasma, viridis
-                cm = plt.cm.magma
-                fig, axarr = plt.subplots(1, n_maps, figsize=(20,5))
-                fig.patch.set_facecolor('white')
-                for imap in range(n_maps):
-                    axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin ='lower')
-                    axarr[imap].set_xticks([])
-                    axarr[imap].set_xticklabels([])
-                    axarr[imap].set_yticks([])
-                    axarr[imap].set_yticklabels([])
-                title = "K-means cluster centroids"
-                axarr[0].set_title(title, fontsize=20, fontweight="bold")
-                plt.show()
+            # if doplot:
+            #     plt.ion()
+            #     # matplotlib's perceptually uniform sequential colormaps:
+            #     # magma, infermo, plasma, viridis
+            #     cm = plt.cm.magma
+            #     fig, axarr = plt.subplots(1, n_maps, figsize=(20,5))
+            #     fig.patch.set_facecolor('white')
+            #     for imap in range(n_maps):
+            #         axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin ='lower')
+            #         axarr[imap].set_xticks([])
+            #         axarr[imap].set_xticklabels([])
+            #         axarr[imap].set_yticks([])
+            #         axarr[imap].set_yticklabels([])
+            #     title = "K-means cluster centroids"
+            #     axarr[0].set_title(title, fontsize=20, fontweight="bold")
+            #     plt.show()
+            #
+            #     # We assign map labels manually
+            #     order_str = input("\n\t\tAssign map labels (e.g 0, 2, 1, 3);")
+            #     order_str = order_str.replace(",","")
+            #     order_str = order_str.replace(" ", "")
+            #     if (len(order_str) != n_maps):
+            #         if (len(order_str) == 0):
+            #             print("\t\tEmpty input string.")
+            #         else:
+            #             print("\t\tParsed manual input: {:s}".format(",".join(order_str)))
+            #             print("\t\tNumber of labels does not equal number of clusters.")
+            #         print("\t\t\Continue using the original assignment...\n")
+            #     else:
+            #         order = np.zeros(n_maps, dtype = int)
+            #         for i, s in enumerate(order_str):
+            #             order[i] = int(s)
+            #         print("\t\tRe-ordered labels: {:s}".format(", ".join(order_str)))
+            #         #re-ordering return varaibles
+            #         maps = maps[order,:]
+            #         for i in range(len(L)):
+            #             L[i] = order[L[i]]
+            #         gev = gev[order]
+            #         #Figure
+            #         fig, axarr = plt.subplots(1, n_maps, figsize =(20,5))
+            #         fig.patch.set_facecolor('white')
+            #         for imap in range(n_maps):
+            #             axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin='lower')
+            #             axarr[imap].set_xticks([])
+            #             axarr[imap].set_xticklabels([])
+            #             axarr[imap].set_yticks([])
+            #             axarr[imap].set_yticklabels([])
+            #         title = "reordered K-means cluster centroids"
+            #         axarr[0].set_title(title, fontsize = 20, fontweight= "bold")
+            #         plt.show()
+            #         plt.ioff()
 
-                # We assign map labels manually
-                order_str = input("\n\t\tAssign map labels (e.g 0, 2, 1, 3);")
-                order_str = order_str.replace(",","")
-                order_str = order_str.replace(" ", "")
-                if (len(order_str) != n_maps):
-                    if (len(order_str) == 0):
-                        print("\t\tEmpty input string.")
-                    else:
-                        print("\t\tParsed manual input: {:s}".format(",".join(order_str)))
-                        print("\t\tNumber of labels does not equal number of clusters.")
-                    print("\t\t\Continue using the original assignment...\n")
-                else:
-                    order = np.zeros(n_maps, dtype = int)
-                    for i, s in enumerate(order_str):
-                        order[i] = int(s)
-                    print("\t\tRe-ordered labels: {:s}".format(", ".join(order_str)))
-                    #re-ordering return varaibles
-                    maps = maps[order,:]
-                    for i in range(len(L)):
-                        L[i] = order[L[i]]
-                    gev = gev[order]
-                    #Figure
-                    fig, axarr = plt.subplots(1, n_maps, figsize =(20,5))
-                    fig.patch.set_facecolor('white')
-                    for imap in range(n_maps):
-                        axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin='lower')
-                        axarr[imap].set_xticks([])
-                        axarr[imap].set_xticklabels([])
-                        axarr[imap].set_yticks([])
-                        axarr[imap].set_yticklabels([])
-                    title = "reordered K-means cluster centroids"
-                    axarr[0].set_title(title, fontsize = 20, fontweight= "bold")
-                    plt.show()
-                    plt.ioff()
+    #return maps
+    return maps, L_, gfp_peaks, gev, cv
 
-    return maps, L_, gfp_peaks, gev,cv
+
+
+
+def dotproduct(v1,v2):
+    return sum((a*b) for a,b in zip(v1,v2))
+   
+
+def length(v):
+    return math.sqrt(dotproduct(v,v))
+
+def angle(v1,v2):
+    cos_theta = (dotproduct(v1,v2))/(length(v1)*length(v2))
+    return cos_theta 
+
+def p_empirical(data, n_clusters):
+    "Empirical symbol distribution"
+    #Arg: data: numpy array with size of length of microstate sequence
+    # n_clusters: no. of ms clusters
+    #returns: p: empirical distribution
+
+    p = np.zeros(n_clusters)
+    n = len(data)
+    for i in range(n):
+        p[data[i]] += 1.0
+    p /= n
+    return p
+
+def T_empirical(data, n_clusters):
+    """Empirical transition of the maps from one class to another.
+    
+    Args: data: numpy array of the length of ms sequence obtained
+          n_clusters: no. of ms maps or class or clusters
+    
+    Returns: T: empirical transition matrix
+        """
+    T = np.zeros((n_clusters,n_clusters))
+    n = len(data)
+    for i in range(n-1):
+        T[data[i],data[i+1]] += 1.0
+    p_row = np.sum(T, axis = 1)
+    for i in range(n_clusters):
+        if (p_row[i] != 0.0):
+            for j in range(n_clusters):
+                T[i,j]/=p_row[i]
+    return T
+
+def print_matrix(T):
+    """Console output of T matrix
+    Args: T: matrix to print
+    """
+    for i,j in np.ndindex(T.shape):
+        if(j==0):
+            print("\t\t[{:.3f}".format(T[i,j]))
+        elif (j == T.shape[1]-1):
+            print("{:.3f}]\n".format(T[i,j]))
+        else:
+            print("{:.3f}".format(T[i,j]))
+    return None
+
+#def check_colinearity(vec1,vec2):
+    
+
+def oneway_anova(data1,data2,data3):
+    
+    for i in range(0,len(data1)):
+        Class_A = list(data1[i])+ list(data2[i])+list(data3[i])
+        group_names = (['Bad']*len(data1[i])+(['Group1']*len(data2[i]))+(['Group2']*len(data3[i])))
+        data = pd.DataFrame({'Group_names':group_names, 'Microstate_class_A': Class_A})
+        data.groupby('Group_names').mean()
+        
+        lm = ols('Microstate_class_A ~ C(Group_names)', data = data).fit()
+        print(lm.summary())
+        table = sm.stats.anova_lm(lm)
+        print('\t\t 1-way ANOVA table')
+        print(table)
+
+        #Computing the overall mean
+        overall_mean = data['Microstate_class_A'].mean()
+        print(overall_mean)
+        #Computing the Sum of Squares Total
+        data['overall_mean'] = overall_mean
+        ss_total = sum((data['Microstate_class_A']-data['overall_mean'])**2)
+        print(ss_total)
+
+        #Computing thre group means
+        group_means = data.groupby('Group_names').mean()
+        group_means = group_means.rename(columns = {'Microstate_class_A': 'group_mean'})
+        print(group_means)
+
+        #Addition of group means and overall means to the original data frame
+        data = data.merge(group_means, left_on = 'Group_names', right_index= True)
+
+        #Computing Sum of Squares Residual
+        ss_residual = sum((data['Microstate_class_A']-data['group_mean'])**2)
+        print(ss_residual)
+
+        #Computation of sum of sqaures model
+        #ss_explained = sum((data['overall_mean']-data['group_mean'])**2)
+        ss_explained = ss_total - ss_residual
+        print(ss_explained)
+
+        #Computation of mean sqaure residual
+        n_groups = len(set(data['Group_names']))
+        n_obs = data.shape[0]
+        df_residual = n_obs - n_groups
+        ms_residual = ss_residual/df_residual
+        print(ms_residual)
+
+        #Computation of mean square exaplained
+        df_explained = n_groups -1
+        ms_explained = ss_explained/df_explained
+        print(ms_explained)
+
+        #Computation of F-value
+        f = ms_explained/ms_residual
+        print(f)
+
+        #Computing the p-value
+        p_value = 1-scipy.stats.f.cdf(f, df_explained,df_residual)
+        print(p_value)
+
+    return None
+
+def pca_app(data):
+    pca = PCA(n_components = 3)
+    pca.fit(data)
+    print("Result of explained varience ratio")
+    print(pca.explained_variance_ratio_)
+    print("Singular values after PCA")
+    print(pca.singular_values_)
+
+    return None
+
+
+def rcanonical(data1,data2):
+    nSamples = len(data1)
+    train1 = data1[:int(nSamples//2)]
+    train2 = data2[:int(nSamples//2)]
+    
+    test1 = data1[int(nSamples//2):]
+    test2 = data2[int(nSamples//2):]
+    n_components = 3
+    cca = rcca.CCA(kernelcca = False, reg = 0., numCC = n_components)
+ 
+    cca.train([train1,train2])
+    testcorrs = cca.validate([test1,test2])
+
+    plt.plot(np.arrange(n_components)+1, cca.cancorrs, 'ko')
+    plt.xlim(0.5, 0.5+n_components)
+    plt.xticks(np.arange(n_components)+1)
+    plt.xlabel('Canonical component')
+    plt.ylabel('Canonical correlattions')
+    plt.title('Canonical correlations')
+    print('''The canonical correlations are:\n
+    Component 1: %0.02f\n
+    Component 2: %0.02f\n
+    Component 3: %0.02f\n
+    ''' %tuple(cca.cancorrs))
+    nTicks = max(testcorrs[0].shape[0],testcorrs[1].shape[0])
+    bmap1 =qualitative.Dark2_3
+    plt.plot(np.arange(testcorrs[0].shape[0])+1, testcorrs[0], 'o', color = bmap1.mpl_colors[0])
+    plt.plot(np.arange(testcorrs[1].shape[0])+1, testcorrs[1], 'o', color = bmap1.mpl_colors[1])
+    plt.xlim(0.5, 0.5 + nTicks + 3)
+    plt.ylim(0.0, 1.0)
+    plt.xticks(np.arange(nTicks)+1)
+    plt.xlabel('Dataset dimension')
+    plt.ylabel('Prediction correlation')
+    plt.title('Prediction accuracy')
+    plt.legend(['Dataset 1', 'Dataset 2'])
+    print('''The prediction accuracy for the first dataset is:\n
+    Dimension 1: %.02f\n
+    Dimension 2: %.02f\n
+    Dimension 3: %.02f\n
+    '''% tuple(testcorrs[0]))
+    print('''The prediction accuracy for the second dataset is:\n
+    Dimension 1: %.02f\n
+    Dimension 2: %.02f\n
+    Dimension 3: %.02f\n
+    '''% tuple(testcorrs[1]))
+    #cca.fit(data1,data2)
+    #X_c, Y_c = cca.transform(data1,data2)
+    return None
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+     
 
 
 
