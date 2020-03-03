@@ -444,6 +444,7 @@ def print_matrix(T):
 
 #def check_colinearity(vec1,vec2):
     
+ 
 
 def oneway_anova(data1,data2,data3):
     
