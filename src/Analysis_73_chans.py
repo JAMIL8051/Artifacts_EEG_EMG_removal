@@ -26,12 +26,12 @@ chs_grp1, fs_grp1, data_raw_grp1 = testing.read_edf('C:/projects/eeg_microstates
 
 #Band pass filtering
 #data = testing.bp_filter(data_raw, 1, 35, fs) 
-data_bads = testing.bp_filter(data_raw_bads, 1, 35, fs_bads)
-data_grp1 = testing.bp_filter(data_raw_grp1, 1, 35, fs_grp1)
+data_bads = testing.bp_filter(data_raw_bads, 1, 80, fs_bads)
+data_grp1 = testing.bp_filter(data_raw_grp1, 1, 80, fs_grp1)
 #data_grp2 = testing.bp_filter(data_raw_grp2, 1, 80, fs_grp2)
 
 # Optimal No. of microstate clusters or maps 4 or 6
-n_maps = 6
+n_maps = 3
 
 # Modified k-means algorithm
 #maps, x, gpf_peaks, gev, cv =testing.kmeans(data,n_maps,n_runs =10, maxerr=1e-6,maxiter=500)
@@ -40,10 +40,77 @@ maps_grp1, x_grp1, gfp_peaks_grp1, gev_grp1, cv_grp1 = testing.kmeans(data_grp1,
 #maps_grp2, x_grp2, gfp_peaks_grp2, gev_grp2, cv_grp2 = testing.kmeans(data_grp2, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
 print('\n\t Microstate Analysis succesful')
 
-# Formation 
+# Spatial Analysis
+for i in range(0,n_maps):
+    x,data2, data4, data_grp1_2, data_grp1_4 = testing.spatial_derivative(maps_bads[i],maps_grp1[i])
+    #Plotting the potential values
+    plt.plot(x,maps_bads[i])
+    plt.xlim(1, 1+len(x))
+    plt.xticks(ticks = None, labels = None)
+    plt.xlabel('No. of channels')
+    plt.ylabel('Potential values')
+    plt.title("Potential map{:1} of selected bad channels".format(i))
+    plt.show()
 
-h = np.reshape(maps_bads[0],(10,1))
-g = np.reshape(maps_bads[0],(1,10))
+    #Plotting the 1st spatial
+    plt.plot(x,data2)
+    plt.xlim(1, 1+len(x))
+    plt.xticks(ticks = None, labels = None)
+    plt.xlabel('No. of channels')
+    plt.ylabel('Potential values')
+    plt.title("First Spatial derivative of the Potential map{:1}".format(i))
+    plt.show()
+
+    #Plotting the 2nd Spatial
+    plt.plot(x,data4)
+    plt.xlim(1, 1+len(x))
+    plt.xticks(ticks = None, labels = None)
+    plt.xlabel('No. of channels')
+    plt.ylabel('Potential values')
+    plt.title("Second Spatial derivative(Current source density) of the Potential map{:1}".format(i))
+    plt.show()
+    
+    #Plotting the potential values
+    plt.plot(x,maps_grp1[i])
+    plt.xlim(1, 1+len(x))
+    plt.xticks(ticks = None, labels = None)
+    plt.xlabel('No. of channels')
+    plt.ylabel('Potential values')
+    plt.title("Potential map{:1} of Group1 channels".format(i))
+    plt.show()
+
+    #Plotting the 1st spatial
+    plt.plot(x,data_grp1_2)
+    plt.xlim(1, 1+len(x))
+    plt.xticks(ticks = None, labels = None)
+    plt.xlabel('No. of channels')
+    plt.ylabel('Potential values')
+    plt.title("First Spatial derivative of the Potential map{:1}".format(i))
+    plt.show()
+
+    #Plotting the 2nd Spatial
+    plt.plot(x,data_grp1_4)
+    plt.xlim(1, 1+len(x))
+    plt.xticks(ticks = None, labels = None)
+    plt.xlabel('No. of channels')
+    plt.ylabel('Potential values')
+    plt.title("Second Spatial derivative(Current source density) of the Potential map{:1}".format(i))
+    plt.show()
+
+#Finding the topographic dissimilarity and correlation between maps of two groups:
+for i in range(0, n_maps):    
+    for j in range(0,n_maps):
+        dissimilarity = testing.topo_dissimilarity(maps_bads[i], maps_grp1[j])
+        print("The topographic dissimilarity between bad channels map {:1} and group 1 channels maps {:1} is {:6f}".format(i,j,dissimilarity))
+        corr = testing.topographic_correlation(maps_bads[i], maps_grp1[j])
+        print("The topographic correlation between bad channels map {:1} and group 1 channels maps {:1} is {:6f}".format(i, j, corr))
+
+
+
+    
+#Formation of square matrix
+h = np.reshape(maps_bads[0],(len(chs_bads),1))
+g = np.reshape(maps_bads[0],(1,len(chs_bads)))
 print(g)
 print("2nd one")
 print(maps_bads[0])
@@ -98,10 +165,6 @@ pps_grp1 = len(gfp_peaks_grp1)/(len(x_grp1)/fs_grp1)
 print("GFP peaks per second for channels group 1: {:.2f}".format(pps_grp1))
 pps_ch_grp2 = len(gfp_peaks_grp2)/(len(x_grp2)/fs_grp2)
 
-#Finding the angle between maps of two groups:
-for i in range(0,n_maps):    
-    cos_theta = testing.angle(maps_bads[i], maps_grp1[i])
-    print(cos_theta)
 
 
 #Class wise 1 factor(1 way) Topographic ANOVA(TANOVA)

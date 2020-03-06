@@ -389,13 +389,12 @@ def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500):
 def dotproduct(v1,v2):
     return sum((a*b) for a,b in zip(v1,v2))
    
-
 def length(v):
     return math.sqrt(dotproduct(v,v))
 
-def angle(v1,v2):
-    cos_theta = (dotproduct(v1,v2))/(length(v1)*length(v2))
-    return cos_theta 
+def topographic_correlation(v1,v2):
+    corr = (dotproduct(v1,v2))/(length(v1)*length(v2))
+    return corr
 
 def p_empirical(data, n_clusters):
     "Empirical symbol distribution"
@@ -442,8 +441,39 @@ def print_matrix(T):
             print("{:.3f}".format(T[i,j]))
     return None
 
-#def check_colinearity(vec1,vec2):
+def spatial_derivative(data_bad, data_grp1):
+    data = data_bad
+    x = np.linspace(1,len(data), num = len(data))
+    data2 = np.empty((len(data),1),dtype = float, order ='F')
+    for i in range(len(data)-1):
+        data2[i] =data[i+1]-data[i]
     
+    data3 = data2
+    data4 = np.empty((len(data),1),dtype = float, order='F')
+    for i in range(len(data)-1):
+        data4[i] = data3[i+1]-data[i]
+    
+    data_grp1_2 = np.empty((len(data),1),dtype = float, order ='F')
+    for i in range(len(data)-1):
+        data2[i] =data_grp1[i+1]-data_grp1[i]
+    
+    data_grp1_3 = data_grp1_2
+    
+    data_grp1_4 = np.empty((len(data),1),dtype = float, order='F')
+    for i in range(len(data)-1):
+        data4[i] = data_grp1_3[i+1]-data_grp1_3[i]
+    
+    return x,data2, data4, data_grp1_2,data_grp1_4
+
+def normalized_vector(u):
+    norm_u =u/length(u)
+    return norm_u
+
+def topo_dissimilarity(u,v):
+    norm_u = normalized_vector(u)
+    norm_v = normalized_vector(v)
+    dissimilarity = math.sqrt(sum(((a-b)**2) for a,b in zip(norm_u, norm_v)))
+    return dissimilarity
  
 
 def oneway_anova(data1,data2,data3):
