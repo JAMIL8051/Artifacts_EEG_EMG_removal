@@ -26,20 +26,28 @@ chs_grp1, fs_grp1, data_raw_grp1 = testing.read_edf('C:/projects/eeg_microstates
 
 #Band pass filtering
 #data = testing.bp_filter(data_raw, 1, 35, fs) 
-data_bads = testing.bp_filter(data_raw_bads, 1, 80, fs_bads)
-data_grp1 = testing.bp_filter(data_raw_grp1, 1, 80, fs_grp1)
+data_bads = testing.bp_filter(data_raw_bads, 1, 90, fs_bads)
+data_grp1 = testing.bp_filter(data_raw_grp1, 1, 90, fs_grp1)
 #data_grp2 = testing.bp_filter(data_raw_grp2, 1, 80, fs_grp2)
 
+#Excluding the zero mean
+#data_bads = testing.exclude_zero_mean(data_bads)
+#data_grp1 = testing.exclude_zero_mean(data_bads)
+#data_grp2 = testing.exclude_zero_mean(data_bads)
+
 # Optimal No. of microstate clusters or maps 4 or 6
-n_maps = 3
+n_maps = 4
 
 # Modified k-means algorithm
 #maps, x, gpf_peaks, gev, cv =testing.kmeans(data,n_maps,n_runs =10, maxerr=1e-6,maxiter=500)
 maps_bads, x_bads, gfp_peaks_bads, gev_bads, cv_bads = testing.kmeans(data_bads, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
-maps_grp1, x_grp1, gfp_peaks_grp1, gev_grp1, cv_grp1 = testing.kmeans(data_grp1, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
+#maps_grp1, x_grp1, gfp_peaks_grp1, gev_grp1, cv_grp1 = testing.kmeans(data_grp1, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
 #maps_grp2, x_grp2, gfp_peaks_grp2, gev_grp2, cv_grp2 = testing.kmeans(data_grp2, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
 print('\n\t Microstate Analysis succesful')
 
+data_scaled = testing.orthogonal_projection_3d(maps_bads[0])
+print(data_scaled)
+print('Continue')
 # Spatial Analysis
 for i in range(0,n_maps):
     x,data2, data4, data_grp1_2, data_grp1_4 = testing.spatial_derivative(maps_bads[i],maps_grp1[i])
@@ -49,7 +57,7 @@ for i in range(0,n_maps):
     plt.xticks(ticks = None, labels = None)
     plt.xlabel('No. of channels')
     plt.ylabel('Potential values')
-    plt.title("Potential map{:1} of selected bad channels".format(i))
+    plt.title("Potential map {:1} of selected bad channels".format(i))
     plt.show()
 
     #Plotting the 1st spatial
@@ -58,7 +66,7 @@ for i in range(0,n_maps):
     plt.xticks(ticks = None, labels = None)
     plt.xlabel('No. of channels')
     plt.ylabel('Potential values')
-    plt.title("First Spatial derivative of the Potential map{:1}".format(i))
+    plt.title("First Spatial derivative of the Potential map {:1}".format(i))
     plt.show()
 
     #Plotting the 2nd Spatial
@@ -76,7 +84,7 @@ for i in range(0,n_maps):
     plt.xticks(ticks = None, labels = None)
     plt.xlabel('No. of channels')
     plt.ylabel('Potential values')
-    plt.title("Potential map{:1} of Group1 channels".format(i))
+    plt.title("Potential map {:1} of Group1 channels".format(i))
     plt.show()
 
     #Plotting the 1st spatial
@@ -85,7 +93,7 @@ for i in range(0,n_maps):
     plt.xticks(ticks = None, labels = None)
     plt.xlabel('No. of channels')
     plt.ylabel('Potential values')
-    plt.title("First Spatial derivative of the Potential map{:1}".format(i))
+    plt.title("First Spatial derivative of the Potential map {:1}".format(i))
     plt.show()
 
     #Plotting the 2nd Spatial
@@ -94,7 +102,7 @@ for i in range(0,n_maps):
     plt.xticks(ticks = None, labels = None)
     plt.xlabel('No. of channels')
     plt.ylabel('Potential values')
-    plt.title("Second Spatial derivative(Current source density) of the Potential map{:1}".format(i))
+    plt.title("Second Spatial derivative(Current source density) of the Potential map {:1}".format(i))
     plt.show()
 
 #Finding the topographic dissimilarity and correlation between maps of two groups:

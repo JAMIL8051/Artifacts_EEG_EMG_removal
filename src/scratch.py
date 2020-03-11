@@ -166,6 +166,15 @@ def bp_filter(data, f_lo,f_hi, fs):
     data_filt = filtfilt(bp_b2, bp_a2, data_filt, axis=0)
     return data_filt
 
+#Excluding the zero_mean
+def exclude_zero_mean(data):
+    sum = np.sum(data, axis = 0)
+    col = (data!=0).sum(0)
+    reject_zero_mean = sum/col
+    return reject_zero_mean
+
+
+
 
 def topo(data, n_grid=64):
     """Interpolate EEG topography onto a regularly spaced grid
@@ -391,6 +400,21 @@ def dotproduct(v1,v2):
    
 def length(v):
     return math.sqrt(dotproduct(v,v))
+
+
+def orthogonal_projection_3d(data):
+    nd = len(data)
+    
+    while (nd != 3):
+        nd = nd-1
+        last_element = data[nd] # Setting the last element to 1
+        t = 1/last_element
+        data_scaled = np.empty((nd,1),dtype = float, order ='F')
+        for i in range(0, nd):
+            data_scaled[i] = data[i]/t
+        
+    return data_scaled
+
 
 def topographic_correlation(v1,v2):
     corr = (dotproduct(v1,v2))/(length(v1)*length(v2))
