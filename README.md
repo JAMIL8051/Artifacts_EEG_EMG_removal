@@ -2,4 +2,5 @@
 
 Algorithms used: 'N'-microstates algorithm that is the modified k-means
 Ref: 
-
+Randomization statistics:
+Vector analysis: Higher dimensional vector analysis
