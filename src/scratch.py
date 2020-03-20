@@ -3,7 +3,7 @@ import argparse, os, sys, time
 import numpy as np
 import rcca
 import matplotlib.pyplot as plt
-from palettable.colorbrewer import qualitative
+#from palettable.colorbrewer import qualitative
 from scipy.interpolate import griddata
 from scipy.signal import butter, filtfilt, welch
 import scipy.stats
@@ -403,17 +403,32 @@ def length(v):
 
 
 def orthogonal_projection_3d(data):
-    nd = len(data)
-    
-    while (nd != 3):
-        nd = nd-1
-        last_element = data[nd] # Setting the last element to 1
-        t = 1/last_element
-        data_scaled = np.empty((nd,1),dtype = float, order ='F')
-        for i in range(0, nd):
-            data_scaled[i] = data[i]/t
-        
+    for j in range(0,data.shape[0]):
+        nd = data.shape[1]
+        while (nd != 3):
+            nd = nd-1
+            last_element = data[j][nd] # Setting the last element to 1
+            t = 1/last_element
+            data_scaled = np.empty((data.shape[0],nd),dtype = float, order ='F')
+            for i in range(0, nd):
+                data_scaled[j][i] = data[j][i]/t
     return data_scaled
+
+
+
+
+#def orthogonal_projection_3d_map(data):
+#    nd = len(data)
+    
+#    while (nd != 3):
+#        nd = nd-1
+#        last_element = data[nd] # Setting the last element to 1
+#        t = 1/last_element
+#        data_scaled = np.empty((nd,1),dtype = float, order ='F')
+#        for i in range(0, nd):
+#            data_scaled[i] = data[i]/t
+        
+#    return data_scaled
 
 
 def topographic_correlation(v1,v2):
@@ -498,6 +513,56 @@ def topo_dissimilarity(u,v):
     norm_v = normalized_vector(v)
     dissimilarity = math.sqrt(sum(((a-b)**2) for a,b in zip(norm_u, norm_v)))
     return dissimilarity
+
+def comparison_map_diff_between_conditions(data1,data2):
+    mean_data1 = np.mean(data1,axis = 0,keepdims = True)
+    mean_data2 = np.mean(data2,axis = 0,keepdims = True)
+    diff_map = mean_data1 - mean_data2
+    #norm_mean_data1 = normalized_vector(mean_data1)
+    #norm_mean_data2 = normalized_vector(mean_data1)
+    #norm_diff_map = norm_mean_data1 - norm_mean_data2
+    gfp_diff_map = np.std(diff_map, axis = 1)
+    #gmd = np.std(norm_diff_map) # Global map dissimilarity
+    rand_gfp_diff_map =np.zeros(5000)
+    #Concatenate data
+    data = np.concatenate((data1, data2), axis = 0)
+    for i in range(5000):
+        #dataA = np.random.permutation(data1.T)
+        #dataB = np.random.permutation(data2.T)
+
+        np.random.shuffle(data)
+        dataA  = data[0:data1.shape[0], 0:data1.shape[1]]
+        dataB  = data[data1.shape[0]:2*data1.shape[0], 0:data1.shape[1]]
+
+        #lensA = np.array(map(len,dataA)) # Thanks to @Kasramvd on this!
+        #valsA = np.concatenate(dataA)
+        #shift_idxA = np.append(0,lensA[:-1].cumsum())
+        #mean_dataA = np.add.reduceat(valsA,shift_idxA)/lensA.astype(float)
+        
+        #lensB = np.array(map(len,dataB)) # Thanks to @Kasramvd on this!
+        #valsB = np.concatenate(dataB)
+        #shift_idxB = np.append(0,lensB[:-1].cumsum())
+        #mean_dataB = np.add.reduceat(valsB,shift_idxB)/lensB.astype(float)
+        
+        
+        mean_dataA = np.mean(dataA, axis = 0, keepdims = True)
+        mean_dataB = np.mean(dataB, axis = 0, keepdims = True)
+        rand_diff_map = mean_dataA - mean_dataB
+        rand_gfp_diff_map[i] = np.std(rand_diff_map, axis=1)
+    #print(rand_gfp_diff_map)
+    
+    count = 0
+    for i in range(0,len(rand_gfp_diff_map)):
+        if gfp_diff_map <= rand_gfp_diff_map[i]:
+            count = count + 1
+
+    probability = count/len(rand_gfp_diff_map)
+    print(gfp_diff_map)
+    print('The probability is: {}'.format(probability))
+    
+    return None
+
+    
  
 
 def oneway_anova(data1,data2,data3):

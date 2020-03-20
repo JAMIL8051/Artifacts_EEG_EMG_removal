@@ -36,21 +36,43 @@ data_grp1 = testing.bp_filter(data_raw_grp1, 1, 90, fs_grp1)
 #data_grp2 = testing.exclude_zero_mean(data_bads)
 
 # Optimal No. of microstate clusters or maps 4 or 6
-n_maps = 4
+for i in range(6):
+    n_maps = 6
 
-# Modified k-means algorithm
-#maps, x, gpf_peaks, gev, cv =testing.kmeans(data,n_maps,n_runs =10, maxerr=1e-6,maxiter=500)
-maps_bads, x_bads, gfp_peaks_bads, gev_bads, cv_bads = testing.kmeans(data_bads, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
-#maps_grp1, x_grp1, gfp_peaks_grp1, gev_grp1, cv_grp1 = testing.kmeans(data_grp1, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
-#maps_grp2, x_grp2, gfp_peaks_grp2, gev_grp2, cv_grp2 = testing.kmeans(data_grp2, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
-print('\n\t Microstate Analysis succesful')
+    # Modified k-means algorithm
+    #maps, x, gpf_peaks, gev, cv = testing.kmeans(data,n_maps,n_runs =10, maxerr=1e-6,maxiter=500)
+    maps_bads, x_bads, gfp_peaks_bads, gev_bads, cv_bads = testing.kmeans(data_bads, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
+    maps_grp1, x_grp1, gfp_peaks_grp1, gev_grp1, cv_grp1 = testing.kmeans(data_grp1, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
+    #maps_grp2, x_grp2, gfp_peaks_grp2, gev_grp2, cv_grp2 = testing.kmeans(data_grp2, n_maps, n_runs = 10, maxerr = 10e-6, maxiter = 500 )
+    print('\n\t Microstate Analysis succesful')
 
-data_scaled = testing.orthogonal_projection_3d(maps_bads[0])
+    testing.comparison_map_diff_between_conditions(maps_bads,maps_grp1)
+print("OKAY")
+
+#Finding the topographic dissimilarity and correlation between maps of two groups:
+dissimilarity = np.empty((n_maps*n_maps,1), dtype = float, order ='F')
+corr = np.empty((n_maps*n_maps,1), dtype = float, order ='F')
+l = len(dissimilarity)
+
+while(l!=0):
+    k = 0
+    for i in range(0, n_maps):    
+        for j in range(0,n_maps):
+            dissimilarity[k] = testing.topo_dissimilarity(maps_bads[i], maps_grp1[j])
+            #print("The topographic dissimilarity between bad channels map {:1} and group 1 channels maps {:1} is {:6f}".format(i,j,dissimilarity))
+            corr[k] = testing.topographic_correlation(maps_bads[i], maps_grp1[j])
+            #print("The topographic correlation between bad channels map {:1} and group 1 channels maps {:1} is {:6f}".format(i, j, corr))
+            k = k+1
+            l = l-1
+print(dissimilarity)
+print(corr)
+data_scaled = testing.orthogonal_projection_3d(maps_bads)
 print(data_scaled)
 print('Continue')
+
 # Spatial Analysis
 for i in range(0,n_maps):
-    x,data2, data4, data_grp1_2, data_grp1_4 = testing.spatial_derivative(maps_bads[i],maps_grp1[i])
+    x, data2, data4, data_grp1_2, data_grp1_4 = testing.spatial_derivative(maps_bads[i],maps_grp1[i])
     #Plotting the potential values
     plt.plot(x,maps_bads[i])
     plt.xlim(1, 1+len(x))
@@ -105,17 +127,9 @@ for i in range(0,n_maps):
     plt.title("Second Spatial derivative(Current source density) of the Potential map {:1}".format(i))
     plt.show()
 
-#Finding the topographic dissimilarity and correlation between maps of two groups:
-for i in range(0, n_maps):    
-    for j in range(0,n_maps):
-        dissimilarity = testing.topo_dissimilarity(maps_bads[i], maps_grp1[j])
-        print("The topographic dissimilarity between bad channels map {:1} and group 1 channels maps {:1} is {:6f}".format(i,j,dissimilarity))
-        corr = testing.topographic_correlation(maps_bads[i], maps_grp1[j])
-        print("The topographic correlation between bad channels map {:1} and group 1 channels maps {:1} is {:6f}".format(i, j, corr))
 
 
 
-    
 #Formation of square matrix
 h = np.reshape(maps_bads[0],(len(chs_bads),1))
 g = np.reshape(maps_bads[0],(1,len(chs_bads)))
