@@ -12,7 +12,6 @@ import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from sklearn.cross_decomposition import CCA
 from sklearn.decomposition import PCA
- 
 
 
 def read_edf(filename):
@@ -95,6 +94,7 @@ def read_edf(filename):
            header['samples_per_record'][0]/header['duration'],\
            data
 
+
 def read_xyz(filename):
 #    """Read EEG electrode locations in xyz format
 #
@@ -172,8 +172,6 @@ def exclude_zero_mean(data):
     col = (data!=0).sum(0)
     reject_zero_mean = sum/col
     return reject_zero_mean
-
-
 
 
 def topo(data, n_grid=64):
@@ -393,8 +391,6 @@ def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500):
     return maps, L_, gfp_peaks, gev, cv
 
 
-
-
 def dotproduct(v1,v2):
     return sum((a*b) for a,b in zip(v1,v2))
    
@@ -416,19 +412,19 @@ def orthogonal_projection_3d(data):
 
 
 
-
-#def orthogonal_projection_3d_map(data):
-#    nd = len(data)
+#Orthogonal projection in 3d for each map
+def orthogonal_projection_3d_map(data):
+    nd = len(data)
     
-#    while (nd != 3):
-#        nd = nd-1
-#        last_element = data[nd] # Setting the last element to 1
-#        t = 1/last_element
-#        data_scaled = np.empty((nd,1),dtype = float, order ='F')
-#        for i in range(0, nd):
-#            data_scaled[i] = data[i]/t
+    while (nd != 3):
+        nd = nd-1
+        last_element = data[nd] # Setting the last element to 1
+        t = 1/last_element
+        data_scaled = np.empty((nd,1),dtype = float, order ='F')
+        for i in range(0, nd):
+            data_scaled[i] = data[i]/t
         
-#    return data_scaled
+    return data_scaled
 
 
 def topographic_correlation(v1,v2):
@@ -514,7 +510,37 @@ def topo_dissimilarity(u,v):
     dissimilarity = math.sqrt(sum(((a-b)**2) for a,b in zip(norm_u, norm_v)))
     return dissimilarity
 
-def comparison_map_diff_between_conditions(data1,data2):
+def test_topography_consistancy(data1, data2):
+    #This function test the topographic consistency among the maps of the two groups:accross the two groups
+    
+    data = np.concatenate((data1,data2), axis = 0)# Here axis=0/1 will depend whether we shuffle potential 
+    #values of same electrode/channel or just reshuffle electordes. If potential values then axis=0 else 1 
+    #for reshuffle of electrodes/channels.
+    
+    observed_grand_mean = np.mean(data, axis = 0)
+    gfp_observed_grand_mean = np.std(observed_grand_mean)
+    gfp_after_shuffle = np.zeros(5000)
+
+    for i in range(5000):
+        np.random.shuffle(data1.T)# Here data1/data1.T will depend whether we shuffle potential values of 
+        #same electrode/channel or just reshuffle electordes. 
+        #If potential values then data1 else data1.T for reshuffle of electrodes/channels.
+        np.random.shuffle(data2.T)
+        
+        grand_mean_after_shuffle = np.mean(np.concatenate((data1.T,data2.T),axis = 0))
+        gfp_after_shuffle[i] = np.std(grand_mean_after_shuffle)
+        
+    count = 0
+
+    for i in range(len(gfp_after_shuffle)):
+        if gfp_after_shuffle[i] >= gfp_observed_grand_mean:
+            count = count+1
+    percentage = (count/5000)
+    print('The probability of null hypothesis is :{}'.format(percentage))
+    return None
+
+
+def comparison_map_diff_between_two_conditions(data1,data2):
     mean_data1 = np.mean(data1,axis = 0,keepdims = True)
     mean_data2 = np.mean(data2,axis = 0,keepdims = True)
     diff_map = mean_data1 - mean_data2
@@ -562,10 +588,47 @@ def comparison_map_diff_between_conditions(data1,data2):
     
     return None
 
-def 
-
+def comparison_map_diff_across_conditions(data1,data2,data3,c = 3):
+    grand_mean_all_across_conditions = np.mean(np.concatenate((data1,data2,data3),axis = 0),axis=0)
     
- 
+    residual_maps_condition1 = data1 - grand_mean_all_across_conditions
+    residual_maps_condition2 = data2 - grand_mean_all_across_conditions
+    residual_maps_condition3 = data3 - grand_mean_all_across_conditions
+
+    grand_mean_grp1 = np.mean(residual_maps_condition1, axis = 0)
+    grand_mean_grp2 = np.mean(residual_maps_condition2, axis = 0)
+    grand_mean_grp3 = np.mean(residual_maps_condition3, axis = 0)
+    
+    std_grp1 = np.std(grand_mean_grp1)
+    std_grp2 = np.std(grand_mean_grp2)
+    std_grp3 = np.std(grand_mean_grp3)
+    observed_effect_size = std_grp1 + std_grp2 + std_grp3
+    
+    rand_effect_size = np.zeros(5000)
+    data_within_groups = np.concatenate((residual_maps_condition1,residual_maps_condition2,residual_maps_condition3),axis = 0)
+    
+    for i in range(5000):
+        np.random.shuffle(data_within_groups)
+        residual_maps_within_groups = data_within_groups - np.mean(data_within_groups, axis = 0) 
+        rand_grand_mean_grp1 = np.mean(residual_maps_within_groups[0:data1.shape[0],:], axis = 0)
+        rand_grand_mean_grp2 = np.mean(residual_maps_within_groups[data1.shape[0]:2*data1.shape[0],:], axis = 0)
+        rand_grand_mean_grp3 = np.mean(residual_maps_within_groups[2*data1.shape[0]:3*data1.shape[0],:], axis = 0)
+
+        rand_std_grp1 = np.std(rand_grand_mean_grp1)
+        rand_std_grp2 = np.std(rand_grand_mean_grp2)
+        rand_std_grp3 = np.std(rand_grand_mean_grp3)
+        rand_effect_size[i] = rand_std_grp1 + rand_std_grp2 + rand_std_grp3
+
+    count = 0
+
+    for i in range(0,len(rand_effect_size)):
+        if rand_effect_size[i]>=observed_effect_size:
+            count = count + 1
+
+    percentage = count/5000
+    print('The probability of null hypothesis is: {}'.format(percentage))
+    return None
+     
 
 def oneway_anova(data1,data2,data3):
     
