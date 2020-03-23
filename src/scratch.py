@@ -547,7 +547,7 @@ def comparison_map_diff_between_two_conditions(data1,data2):
     #norm_mean_data1 = normalized_vector(mean_data1)
     #norm_mean_data2 = normalized_vector(mean_data1)
     #norm_diff_map = norm_mean_data1 - norm_mean_data2
-    gfp_diff_map = np.std(diff_map, axis = 1)
+    gfp_diff_map = np.std(diff_map, axis = 0)
     #gmd = np.std(norm_diff_map) # Global map dissimilarity
     rand_gfp_diff_map =np.zeros(5000)
     #Concatenate data
@@ -574,7 +574,7 @@ def comparison_map_diff_between_two_conditions(data1,data2):
         mean_dataA = np.mean(dataA, axis = 0, keepdims = True)
         mean_dataB = np.mean(dataB, axis = 0, keepdims = True)
         rand_diff_map = mean_dataA - mean_dataB
-        rand_gfp_diff_map[i] = np.std(rand_diff_map, axis=1)
+        rand_gfp_diff_map[i] = np.std(rand_diff_map, axis=0)
     #print(rand_gfp_diff_map)
     
     count = 0
@@ -628,6 +628,77 @@ def comparison_map_diff_across_conditions(data1,data2,data3,c = 3):
     percentage = count/5000
     print('The probability of null hypothesis is: {}'.format(percentage))
     return None
+
+def effects_conditions(data1,data2,data3):
+#This function shows: a) The effect for selection of bad channels as group 
+#b) Effect for group1 and group 2 channels to see whether these are of bad channels group 
+#c) Effect of interaction of these two factors:Bad channels group and group1,group2 channels
+    
+    data = np.concatenate((data1,data2,data3), axis = 0)
+    grand_mean = np.mean(data,axis = 0)
+
+    #Step 2 page 178 Chap 8 Electrical Neuroimaging book 
+    res_maps1 = data1 - grand_mean
+    res_maps2 = data2 - grand_mean
+    res_maps3 = data3 - grand_mean
+     
+    #Step 3a.
+    grand_mean_res_map1 = np.mean(res_maps1, axis = 0)
+    grand_mean_res_map2 = np.mean(res_maps2, axis = 0)
+    grand_mean_res_map3 = np.mean(res_maps3, axis = 0)
+
+    #Step 3b.
+    obs_effect_size =np.std(grand_mean_res_map1)+ np.std(grand_mean_res_map3)+ np.std(grand_mean_res_map3)
+    
+    #Step 3c. page 178 Chap 8 Electrical Neuroimaging book
+    res_data1 = data1- grand_mean_res_map1
+    res_data2 = data2- grand_mean_res_map2
+    res_data3 = data3- grand_mean_res_map3
+
+    rand_effect_size = np.zeros(5000)
+    rand_effect_size1 = np.zeros(5000)
+    rand_effect_size2 = np.zeros(5000)
+    
+    rand_res_data = np.concatenate((res_maps1,res_maps2,res_maps3),axis = 0)
+    for i in range(5000):
+        np.random.shuffle(rand_res_data)
+        rand_grand_mean_res_map1 = np.mean(rand_res_data[0:data1.shape[0],:], axis = 0)
+        rand_grand_mean_res_map2 = np.mean(rand_res_data[data1.shape[0]:2*data1.shape[0],:], axis = 0)
+        rand_grand_mean_res_map3 = np.mean(rand_res_data[2*data1.shape[0]:3*data1.shape[0],:], axis = 0)
+        
+        rand_effect_size[i] = np.std(rand_grand_mean_res_map1)
+        rand_effect_size1[i] = np.std(rand_grand_mean_res_map3)
+        rand_effect_size2[i] = np.std(rand_grand_mean_res_map3) 
+        #Step 3 repeat
+        rand_res_data1 = data1- rand_grand_mean_res_map1
+        rand_res_data2 = data2- rand_grand_mean_res_map2
+        rand_res_data3 = data3- rand_grand_mean_res_map3
+
+    count = 0
+    for i in range(0,len(rand_effect_size)):
+        if rand_effect_size[i]>=obs_effect_size:
+            count = count+1
+    percentage = count/5000
+    print('The probability of the null hypothesis for bad channels group factor:{}'.format(count))
+    
+    count1 = 0
+    for i in range(0,len(rand_effect_size)):
+        if rand_effect_size1[i]>=obs_effect_size:
+            count1 = count1+1
+    percentage1 = count1/5000
+    print('The probability of the null hypothesis for channels group 1 factor:{}'.format(count1))
+    
+    count2 = 0
+    for i in range(0,len(rand_effect_size)):
+        if rand_effect_size2[i]>=obs_effect_size:
+            count2 = count2+1
+    percentage2 = count2/5000
+    print('The probability of the null hypothesis for channels group 2 factor:{}'.format(count))
+
+    return None
+
+
+
      
 
 def oneway_anova(data1,data2,data3):
