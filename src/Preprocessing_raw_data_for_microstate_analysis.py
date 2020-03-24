@@ -54,6 +54,8 @@ def preprocess_raw_data():
 raw = preprocess_raw_data()
 raw = raw.resample(sfreq = 200,npad='auto')
 
+preprocessor.apply_ICA(raw)
+
 
 #raw_pick_bad_channels = raw_copy1.pick_channels(ch_names = ['Fp1'])
 

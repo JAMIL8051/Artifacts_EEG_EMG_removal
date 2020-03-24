@@ -170,6 +170,6 @@ def create_average_eog_epochs(raw):
     return eog_epochs, eog_average
 
 #Correction of artifacts with Maxwell filter
-def artifact_correction_maxwell_filter(raw):
-    raw.info['bads'] = DEFAULT_EOG #Setting the bads
-    raw_sss = maxwell_filter(raw, cross_talk = None, calibration = None, )
+#def artifact_correction_maxwell_filter(raw):
+#    raw.info['bads'] = DEFAULT_EOG #Setting the bads
+#    raw_sss = maxwell_filter(raw, cross_talk = None, calibration = None, )

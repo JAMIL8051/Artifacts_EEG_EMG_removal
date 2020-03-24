@@ -537,7 +537,7 @@ def test_topography_consistancy(data1, data2):
             count = count+1
     percentage = (count/5000)
     print('The probability of null hypothesis is :{}'.format(percentage))
-    return None
+    return gfp_after_shuffle
 
 
 def comparison_map_diff_between_two_conditions(data1,data2):
@@ -577,16 +577,16 @@ def comparison_map_diff_between_two_conditions(data1,data2):
         rand_gfp_diff_map[i] = np.std(rand_diff_map, axis=0)
     #print(rand_gfp_diff_map)
     
-    count = 0
+    count_map_diif_two = 0
     for i in range(0,len(rand_gfp_diff_map)):
         if gfp_diff_map <= rand_gfp_diff_map[i]:
-            count = count + 1
+            count_map_diif_two = count + 1
 
     probability = count/len(rand_gfp_diff_map)
     print(gfp_diff_map)
     print('The probability is: {}'.format(probability))
     
-    return None
+    return rand_gfp_diff_map
 
 def comparison_map_diff_across_conditions(data1,data2,data3,c = 3):
     grand_mean_all_across_conditions = np.mean(np.concatenate((data1,data2,data3),axis = 0),axis=0)
@@ -619,15 +619,15 @@ def comparison_map_diff_across_conditions(data1,data2,data3,c = 3):
         rand_std_grp3 = np.std(rand_grand_mean_grp3)
         rand_effect_size[i] = rand_std_grp1 + rand_std_grp2 + rand_std_grp3
 
-    count = 0
+    count_map_diff_multi = 0
 
     for i in range(0,len(rand_effect_size)):
         if rand_effect_size[i]>=observed_effect_size:
             count = count + 1
 
-    percentage = count/5000
+    percentage = count_map_diff_multi/5000
     print('The probability of null hypothesis is: {}'.format(percentage))
-    return None
+    return rand_effect_size
 
 def effects_conditions(data1,data2,data3):
 #This function shows: a) The effect for selection of bad channels as group 
@@ -674,29 +674,62 @@ def effects_conditions(data1,data2,data3):
         rand_res_data2 = data2- rand_grand_mean_res_map2
         rand_res_data3 = data3- rand_grand_mean_res_map3
 
-    count = 0
+    count_con1 = 0
     for i in range(0,len(rand_effect_size)):
         if rand_effect_size[i]>=obs_effect_size:
             count = count+1
-    percentage = count/5000
+    percentage = count_con1/5000
     print('The probability of the null hypothesis for bad channels group factor:{}'.format(count))
     
-    count1 = 0
+    count_con2 = 0
     for i in range(0,len(rand_effect_size)):
         if rand_effect_size1[i]>=obs_effect_size:
             count1 = count1+1
-    percentage1 = count1/5000
+    percentage1 = count_con2/5000
     print('The probability of the null hypothesis for channels group 1 factor:{}'.format(count1))
     
-    count2 = 0
+    count_con3 = 0
     for i in range(0,len(rand_effect_size)):
         if rand_effect_size2[i]>=obs_effect_size:
             count2 = count2+1
-    percentage2 = count2/5000
+    percentage2 = count+_con3/5000
     print('The probability of the null hypothesis for channels group 2 factor:{}'.format(count))
 
-    return None
+    return 
 
+def freq_effects_test(data1,data2,data3,p=1):
+    #this is for the how likely we get the significant results by chance. 
+    #Input agrs: data1/data2/dat3: vector(array) of shape no.of randomizations by 1 
+    # p = the p-value percentage of threshold. By default 1% 
+    first_run1 = data1[0]
+    first_run2 = data2[0]
+    first_run3 = data3[0]
+    
+    pseudo_sig1 = 0
+    pseudo_sig2 = 0
+    pseudo_sig3 = 0
+
+    if p == 5:
+        data1 = data1[0:1000]
+        data2 = data2[0:1000]
+        data3 = data3[0:1000]
+
+    for i in range(0,len(data1)):
+        if data1[i+1]>=first_run1:
+            pseudo_sig1=pseudo_sig1+1
+    percentage1 = pseudo_sig1/len(data1)
+
+    for i in range(0,len(data2)):
+        if data2[i+1]>=first_run2:
+            pseudo_sig1=pseudo_sig1+1
+    percentage2 = pseudo_sig1/len(data2)
+
+    for i in range(0,len(data1)):
+        if data1[i+1]>=first_run1:
+            pseudo_sig1=pseudo_sig1+1
+    percentage3 = pseudo_sig1/len(data3)
+    
+    return percentage1, percentage2, percentage3
 
 
      
