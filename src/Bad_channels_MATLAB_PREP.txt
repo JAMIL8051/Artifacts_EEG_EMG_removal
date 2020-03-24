@@ -1,0 +1,11 @@
+Potential Bad channels obtained within a time frame of 0 to 108 seconds(approx):
+
+1st 32 channels:
+bads = FT7, FC5, P9, FC3, POz, PO3, Iz
+
+2nd 32 channels: 
+bads = Fp2, FT8, C4, AF8, F8
+
+All 64_channels together;
+bads = FT7, Fp2, FT8, P9, Fpz 
+

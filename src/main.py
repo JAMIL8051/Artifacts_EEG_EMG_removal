@@ -6,7 +6,6 @@ import microstates
 import os
 from pathlib import Path
 
-
 #Function to read the MUL data file
 def read_data(path):
     with open (path,'r') as f:
@@ -21,17 +20,14 @@ def read_data(path):
             matrix.append(res)
         return np.asarray(matrix)
 
-
 #Tkinter package for user selection of files: DATA and Channel Location file
 root = tk.Tk()
 root.withdraw()
 
 print("Please select the data file")
 data_file_path  = filedialog.askopenfilename()
-
 print("Please select the channel location file")
 channel_file_path = filedialog.askopenfilename()
-
 
 # "kind" and "path" variables for mne.channels_read_montage function 
 p = Path(channel_file_path)
@@ -46,7 +42,6 @@ path = os.path.join(*f)
 
 
 #Loading of the data: Prefereable format .MUL
-
 data1 = read_data(data_file_path)
 data = np.resize(data1,(63,30000))
 
@@ -62,7 +57,7 @@ ch_names = ['FP1','Fz','F3', 'F7', 'FT9', 'FC5', 'FC1', 'C3','T7','TP9',
 montage = mne.channels.read_montage(kind='Cap63',ch_names = ch_names, 
                                     path = path, unit='cm', transform=False)
 #creating the channel info instance
-info = mne.create_info(ch_names = ch_names, sfreq=250,ch_types ='eeg', 
+info = mne.create_info(ch_names = ch_names, sfreq=500,ch_types =['eeg']*63, 
                        montage = montage, verbose = None)
 #Creating the raw instance of the data
 raw = mne.io.RawArray(data,info,first_samp= 0, verbose = None)

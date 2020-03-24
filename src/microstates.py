@@ -74,9 +74,12 @@ def segment(data, n_states=4, n_inits=10, max_iter=1000, thresh=1e-6,
 
     References
     ----------
-    .. [1] Pascual-Marqui, R. D., Michel, C. M., & Lehmann, D. (1995). Segmentation of brain electrical activity into microstates: model estimation and validation. IEEE Transactions on Biomedical Engineering.
+    .. [1] Pascual-Marqui, R. D., Michel, C. M., & Lehmann, D. (1995).
+           Segmentation of brain electrical activity into microstates: model
+           estimation and validation. IEEE Transactions on Biomedical
+           Engineering.
     """
-    logger.info('Finding %d microstates, using %d random intitializations for the k-means algorithm' %
+    logger.info('Finding %d microstates, using %d random intitializations for the modified k-means algorithm' %
                 (n_states, n_inits))
 
     # Convert min_peak_dist to samples
@@ -167,7 +170,8 @@ def _mod_kmeans(data, n_states=4, n_inits=10, max_iter=1000, thresh=1e-6,
             maps[state] /= np.linalg.norm(maps[state])
 
         # Estimate residual noise
-        act_sum_sq = np.sum(np.sum(maps[segmentation].T * data, axis=0) ** 2)
+        #act_sum_sq = np.sum(np.sum(maps[segmentation].T * data, axis=0) ** 2)
+        act_sum_sq = np.sum((maps[segmentation].T * data) ** 2)
         residual = abs(data_sum_sq - act_sum_sq)
         residual /= float(n_samples * (n_channels - 1))
 
@@ -219,7 +223,7 @@ def _corr_vectors(A, B, axis=0):
 
 
 def plot_segmentation(segmentation, data, times):
-    """Plot a microstate segmentation.
+    """Plot  a microstate segmentation.
 
     Parameters
     ----------
@@ -249,6 +253,9 @@ def plot_segmentation(segmentation, data, times):
     plt.tight_layout()
 
 
+
+
+
 def plot_maps(maps, info):
     """Plot prototypical microstate maps.
 
@@ -261,10 +268,11 @@ def plot_maps(maps, info):
         sensors.
     """
     
-    plt.figure(figsize=(5* len(maps), 2))
+    
     layout = mne.channels.find_layout(info)
+    a = layout.pos[:, :2]
     for i, map in enumerate(maps):
-        
+        plt.figure(figsize=(6* len(maps), 6))
         plt.subplot(1, len(maps), i+1)
         mne.viz.plot_topomap(map, layout.pos[:, :2])
 #        plt.title('%d' % i)
