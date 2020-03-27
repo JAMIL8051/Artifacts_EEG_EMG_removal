@@ -1,3 +1,4 @@
+import mpmath
 import math
 import argparse, os, sys, time
 import numpy as np
@@ -8,12 +9,12 @@ from scipy.interpolate import griddata
 from scipy.signal import butter, filtfilt, welch
 import scipy.stats
 import pandas as pd
-import statsmodels.api as sm
-from statsmodels.formula.api import ols
+#import statsmodels.api as sm
+#from statsmodels.formula.api import ols
 from sklearn.cross_decomposition import CCA
 from sklearn.decomposition import PCA
 
-
+#Edf file reader function
 def read_edf(filename):
     """Basic EDF file format reader
 
@@ -94,7 +95,7 @@ def read_edf(filename):
            header['samples_per_record'][0]/header['duration'],\
            data
 
-
+#Channels location file reader function
 def read_xyz(filename):
 #    """Read EEG electrode locations in xyz format
 #
@@ -225,179 +226,340 @@ def eeg2map(data):
     return top_norm
 
 
-def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500):
-#Arguments
-#data is numpy array size = no of EEG channels
-#n_maps is no of microstate maps
-#n_runs number of k-means runs(optional)
-#maxerr: maximum error of convergence(optional)
-#maxiter: maximum number of iterations (optional)
-#doplot is plot results, default false(optional)
+def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=500, doplot = False):
+    """Modified K-means clustering as detailed in:
+    [1] Pascual-Marqui et al., IEEE TBME (1995) 42(7):658--665
+    [2] Murray et al., Brain Topography(2008) 20:249--264.
+    Variables named as in [1], step numbering as in Table I.
+    Args:
+        data: numpy.array, size = number of EEG channels
+        n_maps: number of microstate maps
+        n_runs: number of K-means runs (optional)
+        maxerr: maximum error for convergence (optional)
+        maxiter: maximum number of iterations (optional)
+        doplot: plot the results, default=False (optional)
+    Returns:
+        maps: microstate maps (number of maps x number of channels)
+        L: sequence of microstate labels
+        gfp_peaks: indices of local GFP maxima
+        gev: global explained variance (0..1)
+        cv: value of the cross-validation criterion
+    """
+    n_t = data.shape[0]
+    n_ch = data.shape[1]
+    data = data - data.mean(axis=1, keepdims = True)
 
-#returns:
-# maps: microstate map (no.  of maps x no.  of channels)
-#L: sequence of microstate labels
-#gfp_peaks: indices of local GFP maxima
-#gev: global explained varience (0..1)
-#cv: value of the cross-validation criterion
-    
-    n_time_samples = data.shape[0]
-    n_channels = data.shape[1]
-    data = data - data.mean(axis =1, keepdims = True)
-
-    #Global field power peaks(GFP peaks)
+    # GFP peaks
     gfp = np.std(data, axis=1)
     gfp_peaks = locmax(gfp)
     gfp_values = gfp[gfp_peaks]
-    gfp2 = np.sum(gfp_values ** 2)# Normalize constant in GEV
+    gfp2 = np.sum(gfp_values**2) # normalizing constant in GEV
     n_gfp = gfp_peaks.shape[0]
 
-    #clustering of GFP peak maps only
+    # clustering of GFP peak maps only
     V = data[gfp_peaks, :]
-    sumV2 = np.sum(V ** 2)
-    #sumV2 = np.dot(V.T,V)
+    sumV2 = np.sum(V**2)
 
-#Storing results for each k-means run
-    cv_list = [] # cross-validation criterion for each k-means run
-    gev_list = [] # Global explained varience(GEV) of each map for each k-means run
-    gevT_list = [] # total GEV values for each k-means run
-    maps_list = [] # microstate maps for each k-means run
-    L_list = [] # microstate label sequence for each k-means run
-
+    # store results for each k-means run
+    cv_list =   []  # cross-validation criterion for each k-means run
+    gev_list =  []  # GEV of each map for each k-means run
+    gevT_list = []  # total GEV values for each k-means run
+    maps_list = []  # microstate maps for each k-means run
+    L_list =    []  # microstate label sequence for each k-means run
     for run in range(n_runs):
-        print(run)
-
-        #initialize random cluster centroids (indices with respect to n_gfp)
+        # initialize random cluster centroids (indices w.r.t. n_gfp)
         rndi = np.random.permutation(n_gfp)[:n_maps]
         maps = V[rndi, :]
-        #normalize row -wise (across EEG channels)
-        maps /= np.sqrt(np.sum(maps ** 2, axis=1, keepdims=True))
-        #initialize
+        # normalize row-wise (across EEG channels)
+        maps /= np.sqrt(np.sum(maps**2, axis=1, keepdims=True))
+        # initialize
         n_iter = 0
         var0 = 1.0
         var1 = 0.0
-        #convergence criterion: varience estimate (step 6)
-        while((np.abs((var0 - var1) / var0) > maxerr) & (n_iter < maxiter)):
-            #(step 3) microstate sequence (= current cluster assigment)
-
+        # convergence criterion: variance estimate (step 6)
+        while ( (np.abs((var0-var1)/var0) > maxerr) & (n_iter < maxiter) ):
+            # (step 3) microstate sequence (= current cluster assignment)
             C = np.dot(V, maps.T)
-            C /= (n_channels * np.outer(gfp[gfp_peaks], np.std(maps, axis =1)))
-            L = np.argmax(C ** 2, axis = 1)
-
-            #(step 4)
+            C /= (n_ch*np.outer(gfp[gfp_peaks], np.std(maps, axis=1)))
+            L = np.argmax(C**2, axis=1)
+            # (step 4)
             for k in range(n_maps):
-                 Vt = V[L == k, :]
-                 #Step 4a
-                 Sk = np.dot(Vt.T, Vt)
-                 #step 4b
-                 evals, evecs = np.linalg.eig(Sk)
-                 v = evecs[:, np.argmax(np.abs(evals))]
-                 maps[k,:] = v / np.sqrt(np.sum(v ** 2))
-                 
-            #Step 5
+                Vt = V[L==k, :]
+                # (step 4a)
+                Sk = np.dot(Vt.T, Vt)
+                # (step 4b)
+                evals, evecs = np.linalg.eig(Sk)
+                v = evecs[:, np.argmax(np.abs(evals))]
+                v = np.real(v)
+                maps[k, :] = v/np.sqrt(np.sum(v**2))
+            # (step 5)
             var1 = var0
-            var0 = sumV2 - np.sum(np.sum(maps[L,:] * V, axis=1) ** 2)
-            var0 /= (n_gfp * (n_channels - 1))
+            var0 = sumV2 - np.sum(np.sum(maps[L, :]*V, axis=1)**2)
+            var0 /= (n_gfp*(n_ch-1))
             n_iter += 1
-            if(n_iter < maxiter):
-                print("\t\tK-means run {:d}/{:d} converged after {:d} iterations." .format(run + 1, n_runs, n_iter))
+        if (n_iter < maxiter):
+            print("\t\tK-means run {:d}/{:d} converged after {:d} iterations.".format(run+1, n_runs, n_iter))
+        else:
+            print("\t\tK-means run {:d}/{:d} did NOT converge after {:d} iterations.".format(run+1, n_runs, maxiter))
+
+        # CROSS-VALIDATION criterion for this run (step 8)
+        C_ = np.dot(data, maps.T)
+        C_ /= (n_ch*np.outer(gfp, np.std(maps, axis=1)))
+        L_ = np.argmax(C_**2, axis=1)
+        var = np.sum(data**2) - np.sum(np.sum(maps[L_, :]*data, axis=1)**2)
+        var /= (n_t*(n_ch-1))
+        cv = var * (n_ch-1)**2/(n_ch-n_maps-1.)**2
+
+        # GEV (global explained variance) of cluster k
+        gev = np.zeros(n_maps)
+        for k in range(n_maps):
+            r = L==k
+            gev[k] = np.sum(gfp_values[r]**2 * C[r,k]**2)/gfp2
+        gev_total = np.sum(gev)
+
+        # store
+        cv_list.append(cv)
+        gev_list.append(gev)
+        gevT_list.append(gev_total)
+        maps_list.append(maps)
+        L_list.append(L_)
+
+    # select best run
+    k_opt = np.argmin(cv_list)
+    #k_opt = np.argmax(gevT_list)
+    maps = maps_list[k_opt]
+    # ms_gfp = ms_list[k_opt] # microstate sequence at GFP peaks
+    gev = gev_list[k_opt]
+    L_ = L_list[k_opt]
+
+    if doplot:
+        plt.ion()
+        # matplotlib's perceptually uniform sequential colormaps:
+        # magma, inferno, plasma, viridis
+        cm = plt.cm.magma
+        fig, axarr = plt.subplots(1, n_maps, figsize=(20,5))
+        fig.patch.set_facecolor('white')
+        for imap in range(n_maps):
+            axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin='lower')
+            axarr[imap].set_xticks([])
+            axarr[imap].set_xticklabels([])
+            axarr[imap].set_yticks([])
+            axarr[imap].set_yticklabels([])
+        title = "K-means cluster centroids"
+        axarr[0].set_title(title, fontsize=16, fontweight="bold")
+        plt.show()
+
+        # --- assign map labels manually ---
+        order_str = raw_input("\n\t\tAssign map labels (e.g. 0, 2, 1, 3): ")
+        order_str = order_str.replace(",", "")
+        order_str = order_str.replace(" ", "")
+        if (len(order_str) != n_maps):
+            if (len(order_str)==0):
+                print("\t\tEmpty input string.")
             else:
-                print("\t\tK-means run {:d}/{:d} did NOT converge after {:d} iterations.".format(run + 1, n_runs, maxiter))
-
-
-            #Cross-validation criterion for this run (step 8)
-            C_ = np.dot(data, maps.T)
-            C_ /= (n_channels * np.outer(gfp, np.std(maps, axis=1)))
-            L_ = np.argmax(C_ ** 2, axis=1)
-            var = np.sum(data ** 2) - np.sum(np.sum(maps[L_,:] * data, axis=1) ** 2)
-            var /= (n_time_samples * (n_channels - 1))
-            cv = var * (n_channels - 1) ** 2 / (n_channels - n_maps - 1.) ** 2
-
-            #GEV of cluster k
-            gev = np.zeros(n_maps)
-            for k in range(n_maps):
-                r = (L == k)
-                gev[k] = np.sum(gfp_values[r] ** 2 * C[r,k] ** 2) / gfp2
-            gev_total = np.sum(gev)
-
-            #Store
-            cv_list.append(cv)
-            gev_list.append(gev)
-            gevT_list.append(gev_total)
-            maps_list.append(maps)
-            L_list.append(L_)
-
-        #Select best run
-            k_opt = np.argmin(cv_list)
-            #k_opt = np.argmax(gevT_list)
-            maps = maps_list[k_opt]
-            #ms_gfp = ms_list[k_opt] # microstate sequence at GFP peaks
-            gev = gev_list[k_opt]
-            L_ = L_list[k_opt]
-            
-            # if doplot:
-            #     plt.ion()
-            #     # matplotlib's perceptually uniform sequential colormaps:
-            #     # magma, infermo, plasma, viridis
-            #     cm = plt.cm.magma
-            #     fig, axarr = plt.subplots(1, n_maps, figsize=(20,5))
-            #     fig.patch.set_facecolor('white')
-            #     for imap in range(n_maps):
-            #         axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin ='lower')
-            #         axarr[imap].set_xticks([])
-            #         axarr[imap].set_xticklabels([])
-            #         axarr[imap].set_yticks([])
-            #         axarr[imap].set_yticklabels([])
-            #     title = "K-means cluster centroids"
-            #     axarr[0].set_title(title, fontsize=20, fontweight="bold")
-            #     plt.show()
-            #
-            #     # We assign map labels manually
-            #     order_str = input("\n\t\tAssign map labels (e.g 0, 2, 1, 3);")
-            #     order_str = order_str.replace(",","")
-            #     order_str = order_str.replace(" ", "")
-            #     if (len(order_str) != n_maps):
-            #         if (len(order_str) == 0):
-            #             print("\t\tEmpty input string.")
-            #         else:
-            #             print("\t\tParsed manual input: {:s}".format(",".join(order_str)))
-            #             print("\t\tNumber of labels does not equal number of clusters.")
-            #         print("\t\t\Continue using the original assignment...\n")
-            #     else:
-            #         order = np.zeros(n_maps, dtype = int)
-            #         for i, s in enumerate(order_str):
-            #             order[i] = int(s)
-            #         print("\t\tRe-ordered labels: {:s}".format(", ".join(order_str)))
-            #         #re-ordering return varaibles
-            #         maps = maps[order,:]
-            #         for i in range(len(L)):
-            #             L[i] = order[L[i]]
-            #         gev = gev[order]
-            #         #Figure
-            #         fig, axarr = plt.subplots(1, n_maps, figsize =(20,5))
-            #         fig.patch.set_facecolor('white')
-            #         for imap in range(n_maps):
-            #             axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin='lower')
-            #             axarr[imap].set_xticks([])
-            #             axarr[imap].set_xticklabels([])
-            #             axarr[imap].set_yticks([])
-            #             axarr[imap].set_yticklabels([])
-            #         title = "reordered K-means cluster centroids"
-            #         axarr[0].set_title(title, fontsize = 20, fontweight= "bold")
-            #         plt.show()
-            #         plt.ioff()
-
-    #return maps
+                print("\t\tParsed manual input: {:s}".format(", ".join(order_str)))
+                print("\t\tNumber of labels does not equal number of clusters.")
+            print("\t\tContinue using the original assignment...\n")
+        else:
+            order = np.zeros(n_maps, dtype=int)
+            for i, s in enumerate(order_str):
+                order[i] = int(s)
+            print("\t\tRe-ordered labels: {:s}".format(", ".join(order_str)))
+            # re-order return variables
+            maps = maps[order,:]
+            for i in range(len(L)):
+                L[i] = order[L[i]]
+            gev = gev[order]
+            # Figure
+            fig, axarr = plt.subplots(1, n_maps, figsize=(20,5))
+            fig.patch.set_facecolor('white')
+            for imap in range(n_maps):
+                axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin='lower')
+                axarr[imap].set_xticks([])
+                axarr[imap].set_xticklabels([])
+                axarr[imap].set_yticks([])
+                axarr[imap].set_yticklabels([])
+            title = "re-ordered K-means cluster centroids"
+            axarr[0].set_title(title, fontsize=16, fontweight="bold")
+            plt.show()
+            plt.ioff()
     return maps, L_, gfp_peaks, gev, cv
+    
+#def kmeans(data, n_maps, n_runs=10, maxerr=1e-6, maxiter=500):
+##Arguments
+##data is numpy array size = no of EEG channels
+##n_maps is no of microstate maps
+##n_runs number of k-means runs(optional)
+##maxerr: maximum error of convergence(optional)
+##maxiter: maximum number of iterations (optional)
+##doplot is plot results, default false(optional)
+
+##returns:
+## maps: microstate map (no.  of maps x no.  of channels)
+##L: sequence of microstate labels
+##gfp_peaks: indices of local GFP maxima
+##gev: global explained varience (0..1)
+##cv: value of the cross-validation criterion
+    
+#    n_time_samples = data.shape[0]
+#    n_channels = data.shape[1]
+#    data = data - data.mean(axis =1, keepdims = True)
+
+#    #Global field power peaks(GFP peaks)
+#    gfp = np.std(data, axis=1)
+#    gfp_peaks = locmax(gfp)
+#    gfp_values = gfp[gfp_peaks]
+#    gfp2 = np.sum(gfp_values ** 2)# Normalize constant in GEV
+#    n_gfp = gfp_peaks.shape[0]
+
+#    #clustering of GFP peak maps only
+#    V = data[gfp_peaks, :]
+#    sumV2 = np.sum(V ** 2)
+#    #sumV2 = np.dot(V.T,V)
+
+##Storing results for each k-means run
+#    cv_list = [] # cross-validation criterion for each k-means run
+#    gev_list = [] # Global explained varience(GEV) of each map for each k-means run
+#    gevT_list = [] # total GEV values for each k-means run
+#    maps_list = [] # microstate maps for each k-means run
+#    L_list = [] # microstate label sequence for each k-means run
+
+#    for run in range(n_runs):
+#        #initialize random cluster centroids (indices with respect to n_gfp)
+#        rndi = np.random.permutation(n_gfp)[:n_maps]
+#        maps = V[rndi, :]
+        
+#        #normalize row -wise (across EEG channels)
+#        maps /= np.sqrt(np.sum(maps ** 2, axis=1, keepdims=True))
+#        #initialize
+#        n_iter = 0
+#        var0 = 1.0
+#        var1 = 0.0
+#        #convergence criterion: varience estimate (step 6)
+#        while((np.abs((var0 - var1) / var0) > maxerr) & (n_iter < maxiter)):
+#            #(step 3) microstate sequence (= current cluster assigment)
+
+#            C = np.dot(V, maps.T)
+#            C /= (n_channels * np.outer(gfp[gfp_peaks], np.std(maps, axis =1)))
+#            L = np.argmax(C ** 2, axis = 1)
+
+#            #(step 4)
+#            for k in range(n_maps):
+#                 Vt = V[L == k, :]
+#                 #Step 4a
+#                 Sk = np.dot(Vt.T, Vt)
+#                 #step 4b
+#                 evals, evecs = np.linalg.eig(Sk)
+#                 v = evecs[:, np.argmax(np.abs(evals))]
+#                 maps[k,:] = v / np.sqrt(np.sum(v ** 2))
+                 
+                 
+#            #Step 5
+#            var1 = var0
+#            var0 = sumV2 - np.sum(np.sum(maps[L,:] * V, axis=1) ** 2)
+#            var0 /= (n_gfp * (n_channels - 1))
+#            n_iter += 1
+#            if(n_iter < maxiter):
+#                print("\t\tK-means run {:d}/{:d} converged after {:d} iterations." .format(run + 1, n_runs, n_iter))
+#            else:
+#                print("\t\tK-means run {:d}/{:d} did NOT converge after {:d} iterations.".format(run + 1, n_runs, maxiter))
 
 
+#            #Cross-validation criterion for this run (step 8)
+#            C_ = np.dot(data, maps.T)
+#            C_ /= (n_channels * np.outer(gfp, np.std(maps, axis=1)))
+#            L_ = np.argmax(C_ ** 2, axis=1)
+#            var = np.sum(data ** 2) - np.sum(np.sum(maps[L_,:] * data, axis=1) ** 2)
+#            var /= (n_time_samples * (n_channels - 1))
+#            cv = var * (n_channels - 1) ** 2 / (n_channels - n_maps - 1.) ** 2
+
+#            #GEV of cluster k
+#            gev = np.zeros(n_maps)
+#            for k in range(n_maps):
+#                r = (L == k)
+#                gev[k] = np.sum(gfp_values[r] ** 2 * C[r,k] ** 2) / gfp2
+#            gev_total = np.sum(gev)
+
+#            #Store
+#            cv_list.append(cv)
+#            gev_list.append(gev)
+#            gevT_list.append(gev_total)
+#            maps_list.append(maps)
+#            L_list.append(L_)
+
+#        #Select best run
+#            k_opt = np.argmin(cv_list)
+#            #k_opt = np.argmax(gevT_list)
+#            maps = maps_list[k_opt]
+#            #ms_gfp = ms_list[k_opt] # microstate sequence at GFP peaks
+#            gev = gev_list[k_opt]
+#            L_ = L_list[k_opt]
+            
+#            # if doplot:
+#            #     plt.ion()
+#            #     # matplotlib's perceptually uniform sequential colormaps:
+#            #     # magma, infermo, plasma, viridis
+#            #     cm = plt.cm.magma
+#            #     fig, axarr = plt.subplots(1, n_maps, figsize=(20,5))
+#            #     fig.patch.set_facecolor('white')
+#            #     for imap in range(n_maps):
+#            #         axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin ='lower')
+#            #         axarr[imap].set_xticks([])
+#            #         axarr[imap].set_xticklabels([])
+#            #         axarr[imap].set_yticks([])
+#            #         axarr[imap].set_yticklabels([])
+#            #     title = "K-means cluster centroids"
+#            #     axarr[0].set_title(title, fontsize=20, fontweight="bold")
+#            #     plt.show()
+#            #
+#            #     # We assign map labels manually
+#            #     order_str = input("\n\t\tAssign map labels (e.g 0, 2, 1, 3);")
+#            #     order_str = order_str.replace(",","")
+#            #     order_str = order_str.replace(" ", "")
+#            #     if (len(order_str) != n_maps):
+#            #         if (len(order_str) == 0):
+#            #             print("\t\tEmpty input string.")
+#            #         else:
+#            #             print("\t\tParsed manual input: {:s}".format(",".join(order_str)))
+#            #             print("\t\tNumber of labels does not equal number of clusters.")
+#            #         print("\t\t\Continue using the original assignment...\n")
+#            #     else:
+#            #         order = np.zeros(n_maps, dtype = int)
+#            #         for i, s in enumerate(order_str):
+#            #             order[i] = int(s)
+#            #         print("\t\tRe-ordered labels: {:s}".format(", ".join(order_str)))
+#            #         #re-ordering return varaibles
+#            #         maps = maps[order,:]
+#            #         for i in range(len(L)):
+#            #             L[i] = order[L[i]]
+#            #         gev = gev[order]
+#            #         #Figure
+#            #         fig, axarr = plt.subplots(1, n_maps, figsize =(20,5))
+#            #         fig.patch.set_facecolor('white')
+#            #         for imap in range(n_maps):
+#            #             axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin='lower')
+#            #             axarr[imap].set_xticks([])
+#            #             axarr[imap].set_xticklabels([])
+#            #             axarr[imap].set_yticks([])
+#            #             axarr[imap].set_yticklabels([])
+#            #         title = "reordered K-means cluster centroids"
+#            #         axarr[0].set_title(title, fontsize = 20, fontweight= "bold")
+#            #         plt.show()
+#            #         plt.ioff()
+
+#    #return maps
+#    return maps, L_, gfp_peaks, gev, cv
+
+#Dot product of two vectors
 def dotproduct(v1,v2):
     return sum((a*b) for a,b in zip(v1,v2))
-   
+
+#To get the length(magnitude) of a vector   
 def length(v):
     return math.sqrt(dotproduct(v,v))
 
 
+#orthogonal project of each maps of a group
 def orthogonal_projection_3d(data):
     for j in range(0,data.shape[0]):
         nd = data.shape[1]
@@ -476,6 +638,7 @@ def print_matrix(T):
             print("{:.3f}".format(T[i,j]))
     return None
 
+#Spatial analysis function
 def spatial_derivative(data_bad, data_grp1):
     data = data_bad
     x = np.linspace(1,len(data), num = len(data))
@@ -500,15 +663,18 @@ def spatial_derivative(data_bad, data_grp1):
     
     return x,data2, data4, data_grp1_2,data_grp1_4
 
+#Function to get unit vector
 def normalized_vector(u):
     norm_u =u/length(u)
     return norm_u
+
 
 def topo_dissimilarity(u,v):
     norm_u = normalized_vector(u)
     norm_v = normalized_vector(v)
     dissimilarity = math.sqrt(sum(((a-b)**2) for a,b in zip(norm_u, norm_v)))
     return dissimilarity
+
 
 def test_topography_consistancy(data1, data2):
     #This function test the topographic consistency among the maps of the two groups:accross the two groups
@@ -724,12 +890,13 @@ def freq_effects_test(data1,data2,data3,p=1):
             pseudo_sig1=pseudo_sig1+1
     percentage2 = pseudo_sig1/len(data2)
 
-    for i in range(0,len(data1)):
+    for i in range(0,len(data3)):
         if data1[i+1]>=first_run1:
             pseudo_sig1=pseudo_sig1+1
     percentage3 = pseudo_sig1/len(data3)
     
     return percentage1, percentage2, percentage3
+
 
 
      
