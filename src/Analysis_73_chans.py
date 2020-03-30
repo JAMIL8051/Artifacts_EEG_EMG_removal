@@ -38,7 +38,7 @@ n_maps = 6
 w = int((1/4)*fs_bads)
 
 #No of times to apply k-means for all the window frames in the data
-times = 10
+times = 3
 
 #Initialization of the maps as per window frame. 
 #Each index of the all_maps_bads/grp1 variable represents each frame of analysis window.
@@ -61,13 +61,15 @@ for i in range(0,times):
 
 print('\n\t Microstate Analysis succesful\n')
 print(all_maps_bads, sep='\n\n')
-print('okay')
+print('OKAY')
 #Statistical test. Ref: Chapter 8 of Book Electrical Neuroimaging by Thomas Koenig and colleagues
 for t in range(0,times):
-    testing.test_topography_consistancy(all_maps_bads[t],all_maps_grp1[t])
-    testing.comparison_map_diff_between_two_conditions(all_maps_bads[t],all_maps_grp1[t])
-    testing.comparison_map_diff_across_conditions(all_maps_bads[t], all_maps_grp1[t], all_maps_grp2[t])
-
+    gfp_after_shuffle = testing.test_topography_consistancy(all_maps_bads[t],all_maps_grp1[t])
+    rand_gfp_diff_map = testing.comparison_map_diff_between_two_conditions(all_maps_bads[t],all_maps_grp1[t])
+    rand_effect_size = testing.comparison_map_diff_across_conditions(all_maps_bads[t], all_maps_grp1[t], all_maps_grp2[t])
+    percentage, percentage1, percentage2 = testing.effects_conditions(all_maps_bads[t], all_maps_grp1[t], all_maps_grp2[t])
+    percentage_freq1, percentage_freq2, percentage_freq3 = testing.freq_effects_test(gfp_after_shuffle, rand_gfp_diff_map, rand_effect_size)
+    
     #Finding the topographic dissimilarity and correlation between maps of two groups:
     dissimilarity = np.empty((n_maps*n_maps,1), dtype = float, order ='F')
     corr = np.empty((n_maps*n_maps,1), dtype = float, order ='F')
