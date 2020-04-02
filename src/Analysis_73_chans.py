@@ -66,10 +66,16 @@ print('OKAY')
 for t in range(0,times):
     gfp_after_shuffle = testing.test_topography_consistancy(all_maps_bads[t],all_maps_grp1[t])
     rand_gfp_diff_map = testing.comparison_map_diff_between_two_conditions(all_maps_bads[t],all_maps_grp1[t])
-    rand_effect_size = testing.comparison_map_diff_across_conditions(all_maps_bads[t], all_maps_grp1[t], all_maps_grp2[t])
-    percentage, percentage1, percentage2 = testing.effects_conditions(all_maps_bads[t], all_maps_grp1[t], all_maps_grp2[t])
-    percentage_freq1, percentage_freq2, percentage_freq3 = testing.freq_effects_test(gfp_after_shuffle, rand_gfp_diff_map, rand_effect_size)
-    
+    #rand_effect_size = testing.comparison_map_diff_across_conditions(all_maps_bads[t], all_maps_grp1[t], all_maps_grp2[t])
+    #percentage, percentage1, percentage2 = testing.effects_conditions(all_maps_bads[t], all_maps_grp1[t], all_maps_grp2[t])
+    #percentage_freq1, percentage_freq2, percentage_freq3 = testing.freq_effects_test(gfp_after_shuffle, rand_gfp_diff_map, rand_effect_size)
+    data_temp = testing.format_data(data,condition,ith_class,n_subject = 4,n_ch = len(chs_bads))
+    rand_effect_size = testing.comparison_map_diff_across_conditions(data = data_temp)
+
+
+
+
+
     #Finding the topographic dissimilarity and correlation between maps of two groups:
     dissimilarity = np.empty((n_maps*n_maps,1), dtype = float, order ='F')
     corr = np.empty((n_maps*n_maps,1), dtype = float, order ='F')

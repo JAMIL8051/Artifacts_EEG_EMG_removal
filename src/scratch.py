@@ -438,6 +438,7 @@ def topographic_correlation(v1,v2):
 
 
 #Spatial analysis function
+
 def spatial_derivative(data_bad, data_grp1):
     data = data_bad
     x = np.linspace(1,len(data), num = len(data))
@@ -547,36 +548,42 @@ def comparison_map_diff_between_two_conditions(data1,data2):
     
     return rand_gfp_diff_map
 
-def comparison_map_diff_across_conditions(data1,data2,data3,c = 3):
-    grand_mean_all_across_conditions = np.mean(np.concatenate((data1,data2,data3),axis = 0),axis=0)
-    
-    residual_maps_condition1 = data1 - grand_mean_all_across_conditions
-    residual_maps_condition2 = data2 - grand_mean_all_across_conditions
-    residual_maps_condition3 = data3 - grand_mean_all_across_conditions
 
-    grand_mean_grp1 = np.mean(residual_maps_condition1, axis = 0)
-    grand_mean_grp2 = np.mean(residual_maps_condition2, axis = 0)
-    grand_mean_grp3 = np.mean(residual_maps_condition3, axis = 0)
+#Formatting the data into conditions and subjects
+def format_data(data, condition, n_subject, n_ch, ith_class):
+        n_condition = len(condition)
+        data_temp = np.zeros((n_subject, n_condition, n_ch))
+        for i in range(n_subject):
+            for j in range(n_condition):
+                data_temp[i,j] = data[condition[j]][i][ith_class]
+        return data_temp
+
+
+def shuffle_data(data, n_condition):
+    for i in range(data.shape[0]):
+        random_index = np.random.permutation(n_condition)
+        data[i] = data[i][random_index]
+    return data
+
+
+def comparison_map_diff_across_conditions(data = data_temp):
     
-    std_grp1 = np.std(grand_mean_grp1)
-    std_grp2 = np.std(grand_mean_grp2)
-    std_grp3 = np.std(grand_mean_grp3)
-    observed_effect_size = std_grp1 + std_grp2 + std_grp3
+    grand_mean_across_subjects = np.mean(data, axis=0)
+    grand_mean_across_subjects_across_conditions = np.mean(data, axis=(0, 1))
+
+    residual = np.power(grand_mean_across_subjects - grand_mean_across_subjects_across_conditions, 2)
+    generalized_dissimilarity = np.sum(np.sqrt(np.mean(residual, axis=1)))
     
+    residual_maps = grand_mean_across_subjects - grand_mean_across_subjects_across_conditions
+    #Within-subject factor:Shuffle accross subjects:
     rand_effect_size = np.zeros(5000)
-    data_within_groups = np.concatenate((residual_maps_condition1,residual_maps_condition2,residual_maps_condition3),axis = 0)
-    
     for i in range(5000):
-        np.random.shuffle(data_within_groups)
-        residual_maps_within_groups = data_within_groups - np.mean(data_within_groups, axis = 0) 
-        rand_grand_mean_grp1 = np.mean(residual_maps_within_groups[0:data1.shape[0],:], axis = 0)
-        rand_grand_mean_grp2 = np.mean(residual_maps_within_groups[data1.shape[0]:2*data1.shape[0],:], axis = 0)
-        rand_grand_mean_grp3 = np.mean(residual_maps_within_groups[2*data1.shape[0]:3*data1.shape[0],:], axis = 0)
-
-        rand_std_grp1 = np.std(rand_grand_mean_grp1)
-        rand_std_grp2 = np.std(rand_grand_mean_grp2)
-        rand_std_grp3 = np.std(rand_grand_mean_grp3)
-        rand_effect_size[i] = rand_std_grp1 + rand_std_grp2 + rand_std_grp3
+        data_s = shuffle_data(residual_maps, n_condition = 6)
+        rand_grand_mean_across_subjects = np.mean(data_s, axis=0)
+        rand_grand_mean_across_subjects_across_conditions = np.mean(data_s, axis=(0, 1))
+        residual = np.power(grand_mean_across_subjects - grand_mean_across_subjects_across_conditions, 2)
+        rand_generalized_dissimilarity = np.sum(np.sqrt(np.mean(residual, axis=1)))
+        rand_effect_size[i] = rand_generalized_dissimilarity
 
     count_map_diff_multi = 0
 
