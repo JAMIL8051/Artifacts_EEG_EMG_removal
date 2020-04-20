@@ -17,7 +17,6 @@ from matplotlib import pyplot as plt
 import pandas as pd
 
 
-
 #Step1: Importing EDF data files
 #chs, fs, data_raw = testing.read_edf("test.edf") 
 chs_bads, fs_bads, data_raw_bads = testing.read_edf('C:/projects/eeg_microstates/src/2019-05-03-suject-01-bad_ch_192sec.edf')
@@ -29,7 +28,6 @@ chs_grp2, fs_grp2, data_raw_grp2 = testing.read_edf('C:/projects/eeg_microstates
 data_bads = testing.bp_filter(data_raw_bads, 1, 90, fs_bads)
 data_grp1 = testing.bp_filter(data_raw_grp1, 1, 90, fs_grp1)
 data_grp2 = testing.bp_filter(data_raw_grp2, 1, 80, fs_grp2)
-
 
 # Optimal No. of microstate clusters or maps 4 or 6
 n_maps = 6
@@ -45,6 +43,7 @@ times = 3
 all_maps_bads = np.zeros((times, n_maps, data_bads.shape[1]), dtype = float)
 all_maps_grp1 = np.zeros((times, n_maps, data_grp1.shape[1]), dtype = float)
 all_maps_grp2 = np.zeros((times, n_maps, data_grp2.shape[1]), dtype = float)
+
 
 for i in range(0,times):
     data_bads_a = data_bads[i:(i+1)*w,:]
@@ -71,9 +70,6 @@ for t in range(0,times):
     #percentage_freq1, percentage_freq2, percentage_freq3 = testing.freq_effects_test(gfp_after_shuffle, rand_gfp_diff_map, rand_effect_size)
     data_temp = testing.format_data(data,condition,ith_class,n_subject = 4,n_ch = len(chs_bads))
     rand_effect_size = testing.comparison_map_diff_across_conditions(data = data_temp)
-
-
-
 
 
     #Finding the topographic dissimilarity and correlation between maps of two groups:
@@ -320,15 +316,18 @@ noise = math.sqrt((var_maps_bads/n1)+(var_maps_grp1/n2))
 #Student t-value
 t_value = mean_diff/noise
 
+
 #Student t-test: Degree of freedom df
 df =n1+n2-2
 statistic, p_value = scipy.stats.ttest_ind_from_stats(np.mean(maps_bads[0]),np.std(maps_bads[0]), n1, np.mean(maps_grp1[0]), np.std(maps_grp1[0]), n2, equal_var = False)
 statistics1, p_value1 = scipy.stats.ttest_ind(np.mean(maps_bads[0]), np.mean(maps_grp1[0]),axis = 0, equal_var = False, nan_policy ='propagate')
 
+
 #Basic statistcs:
 #Empirical label distribution
 p_hat_bads = testing.p_empirical(x_bads, n_maps)
 p_hat_grp1 = testing.p_empirical(x_grp1, n_maps)
+
 
 #Transition matrices
 T_hat_bads = testing.T_empirical(x_bads, n_maps)
@@ -344,7 +343,6 @@ for i in range(0, n_maps):
             print("Probably independent: The bad channels map:{:1} and group1 channels map: {:1}".format(i,j))
         else:
             print("Probably dependent: The bad channels map:{:1} and group1 channels map: {:1}".format(i,j))
-
 
 
 #Calculation of cosine similarities among the maps of bad channels group and group 1

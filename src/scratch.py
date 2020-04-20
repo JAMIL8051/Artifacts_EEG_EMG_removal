@@ -96,6 +96,7 @@ def read_edf(filename):
            header['samples_per_record'][0]/header['duration'],\
            data
 
+
 #Channels location file reader function
 def read_xyz(filename):
 #    """Read EEG electrode locations in xyz format
@@ -118,6 +119,7 @@ def read_xyz(filename):
                 l = None
     return ch_names, np.array(locs)
 
+
 def findstr(s, L):
 #    """Find string in list of strings, returns indices.
 #
@@ -130,6 +132,7 @@ def findstr(s, L):
 #
     x = [i for i, l in enumerate(L) if (l==s)]
     return x
+
 
 def locmax(x):
     """Get local maxima of 1D-array
@@ -144,6 +147,7 @@ def locmax(x):
     zc = np.diff(np.sign(dx)) # zero-crossings of dx
     m = 1 + np.where(zc == -2)[0] # indices of local max.
     return m
+
 
 def bp_filter(data, f_lo,f_hi, fs):
     """Digital 6th order butterworth band pass filter
@@ -165,6 +169,7 @@ def bp_filter(data, f_lo,f_hi, fs):
     data_filt = filtfilt(bp_b1, bp_a1, data, axis=0)
     data_filt = filtfilt(bp_b2, bp_a2, data_filt, axis=0)
     return data_filt
+
 
 #Excluding the zero_mean
 def exclude_zero_mean(data):
@@ -389,6 +394,7 @@ def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
 def dotproduct(v1,v2):
     return sum((a*b) for a,b in zip(v1,v2))
 
+
 #To get the length(magnitude) of a vector   
 def length(v):
     return math.sqrt(dotproduct(v,v))
@@ -406,7 +412,6 @@ def orthogonal_projection_3d(data):
             for i in range(0, nd):
                 data_scaled[j][i] = data[j][i]/t
     return data_scaled
-
 
 
 #Orthogonal projection in 3d for each map
@@ -436,9 +441,7 @@ def topographic_correlation(v1,v2):
     return corr
 
 
-
 #Spatial analysis function
-
 def spatial_derivative(data_bad, data_grp1):
     data = data_bad
     x = np.linspace(1,len(data), num = len(data))
@@ -462,6 +465,7 @@ def spatial_derivative(data_bad, data_grp1):
         data4[i] = data_grp1_3[i+1]-data_grp1_3[i]
     
     return x,data2, data4, data_grp1_2,data_grp1_4
+
 
 #Function to get unit vector
 def normalized_vector(u):
@@ -597,6 +601,7 @@ def comparison_map_diff_across_conditions(data, condition, n_subject, n_ch, ith_
     print('\nThe probability of null hypothesis across different conditions is: {}'.format(percentage))
     return rand_effect_size
 
+
 def effects_conditions(data1,data2,data3):
 #This function shows: a) The effect for selection of bad channels as group 
 #b) Effect for group1 and group 2 channels to see whether these are of bad channels group 
@@ -665,6 +670,7 @@ def effects_conditions(data1,data2,data3):
 
     return percentage, percentage1, percentage2
 
+
 def freq_effects_test(data1,data2,data3,p=1):
     #this is for the how likely we get the significant results by chance. 
     #Input agrs: data1/data2/dat3: vector(array) of shape no.of randomizations by 1 
@@ -705,10 +711,12 @@ def freq_effects_test(data1,data2,data3,p=1):
 
     return percentage_freq1, percentage_freq2, percentage_freq3
 
+
 #Function for spataial correlation
 def spatial_correlation(averaged_v1, averaged_v2, std_v1, std_v2, n_ch):
     correlation = np.dot(averaged_v1, averaged_v2) / (n_ch * np.outer(std_v1, std_v2))
     return correlation
+
 
 #Function to back fit the microstate maps on the raw data
 def fit_back(data, maps, distance= 10, n_std=3, polarity=False):
@@ -741,6 +749,7 @@ def concatenate_data_by_condition(data, task_condition, exclude_task):
                 if condition == task_name.split("_")[1]:
                     res[condition] = np.asarray(task_data) if condition not in res else np.concatenate((res[condition], np.asarray(task_data)), axis=1)
     return res
+
 
 def pls(data, task_condition, exclude_task, condition, n_subject,n_ch):
     """ Spatio-temporal Partial least square: As detailed in the reference. 
@@ -818,23 +827,7 @@ def pls(data, task_condition, exclude_task, condition, n_subject,n_ch):
 
     return p_value_LV1, p_value_LV2
 
-
-
-
-    
-
-    
-
-
-
-
      
-
-
-
-
-
-
 def oneway_anova(data1,data2,data3):
     
     for i in range(0,len(data1)):
@@ -896,6 +889,7 @@ def oneway_anova(data1,data2,data3):
 
     return None
 
+
 def pca_app(data):
     pca = PCA(n_components = 3)
     pca.fit(data)
@@ -905,6 +899,7 @@ def pca_app(data):
     print(pca.singular_values_)
 
     return None
+
 
 def p_empirical(data, n_clusters):
     "Empirical symbol distribution"
@@ -918,6 +913,7 @@ def p_empirical(data, n_clusters):
         p[data[i]] += 1.0
     p /= n
     return p
+
 
 def T_empirical(data, n_clusters):
     """Empirical transition of the maps from one class to another.
@@ -937,6 +933,7 @@ def T_empirical(data, n_clusters):
             for j in range(n_clusters):
                 T[i,j]/=p_row[i]
     return T
+
 
 def print_matrix(T):
     """Console output of T matrix
