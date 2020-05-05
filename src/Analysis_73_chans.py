@@ -20,8 +20,18 @@ import pandas as pd
 #Step1: Importing EDF data files
 #chs, fs, data_raw = testing.read_edf("test.edf") 
 chs_bads, fs_bads, data_raw_bads = testing.read_edf('C:/projects/eeg_microstates/src/2019-05-03-suject-01-bad_ch_192sec.edf')
+d = data_raw_bads[0:1024,0]
+#Calculation of avg band power:
+bp_raw_bads = testing.bandpower(d,fs_bads,[45,70],window_sec =None,relative = False)
+print('So the average calculated power in 45-70Hz band is: ',bp_raw_bads)
+
+
+
 chs_grp1, fs_grp1, data_raw_grp1 = testing.read_edf('C:/projects/eeg_microstates/src/2019-05-03-suject-01-ch_grp1_192sec.edf')
 chs_grp2, fs_grp2, data_raw_grp2 = testing.read_edf('C:/projects/eeg_microstates/src/2019-05-03-suject-01-ch_grp2_192sec.edf')
+
+
+
 
 #Band pass filtering
 #data = testing.bp_filter(data_raw, 1, 35, fs) 
@@ -454,7 +464,7 @@ print('\t\t\tUpto 18th Feb 2020')
 # Using the average EEG reference
 #        raw.set_eeg_reference('average')
 # High pass filtering of data
-#        raw.filter(0.2, None)
+#        raw.filter(0.1, None)
 #        return raw
 #    raw = preprocess_raw_data()
     

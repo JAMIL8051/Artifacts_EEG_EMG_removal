@@ -48,11 +48,12 @@ def preprocess_raw_data():
     raw.filter(0.1, None)
     
     
-    #raw.plot_psd(tmax = np.inf, fmax=500)
+    raw.plot_psd(tmax = np.inf, fmax=512)
     return raw   
 # Resampling using pyprep package
 raw = preprocess_raw_data()
-raw = raw.resample(sfreq = 200,npad='auto')
+raw = raw.resample(sfreq = 256,npad='auto')
+data = raw.get_data()
 
 preprocessor.apply_ICA(raw)
 
@@ -60,7 +61,7 @@ preprocessor.apply_ICA(raw)
 #raw_pick_bad_channels = raw_copy1.pick_channels(ch_names = ['Fp1'])
 
 ##EEG microstates analysis on bad_data
-data1 = raw.get_data()
+
 data1 = np.resize(data1,(30,19200))
 #data = data.astype(np.float16)
 
