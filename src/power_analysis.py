@@ -2,7 +2,7 @@ from tkinter import filedialog
 import tkinter as tk
 import numpy as np
 import mne
-import EegPreprocessor as preprocessor
+from 2_preprocessing import EegPreprocessor as preprocessor
 import matplotlib.pyplot as plt
 
 #Preprocessing file
@@ -30,7 +30,7 @@ def load_raw_data(filepath, montage, eog = DEFAULT_EOG):
     raw = mne.io.read_raw_bdf(filepath, montage, eog, preload =True)
     return raw
 
-
+#Preprocessing the raw data
 def preprocess_raw_data():
     print("Please enter the raw data file")
     filepath = get_raw_data_file_path()    
@@ -48,8 +48,8 @@ def preprocess_raw_data():
     
     return raw
 
-# Function for Power_analysis
 
+# Function for Power_analysis
 def final_band_power(raw,channel,N,fs,tmin=None, tmax=None,epoch_time=2):
     """
     raw = Mne.raw object
@@ -63,12 +63,14 @@ def final_band_power(raw,channel,N,fs,tmin=None, tmax=None,epoch_time=2):
     raw = raw.pick(picks=channel)
     
     if (tmin==None and tmax == None):
-        n_epochs = 50
+        n_epochs = 100
     else:
         n_epochs = int((tmax-tmin)/epoch_time)
     
     data = raw.get_data()
     data = data/1e-06
+    #Normalizing the data before power calculations
+    data = (data-data.mean())/(data.std())
     n_channels = len(raw.ch_names)
     epoch_power_45_70Hz = np.zeros((n_channels,n_epochs,1),dtype = 'float')
     
@@ -90,6 +92,7 @@ def final_band_power(raw,channel,N,fs,tmin=None, tmax=None,epoch_time=2):
             epoch_power_45_70Hz[chan,epoch] = power_45_70Hz
             
     return epoch_power_45_70Hz
+
 
 #Main code start here
 raw = preprocess_raw_data()
@@ -145,22 +148,29 @@ Fz_data = Fz_raw.get_data()
 combined_data = np.concatenate((primary_data,AF7_data,AF8_data,FT7_data,FT8_data),axis = 0)
 
 
-#Step 1 :finding the threshold val without simulated data. 
-threshold_val_AF7 = primary_power_45_70Hz[0,1:].median(dtype='float')+ 1*primary_power_45_70Hz[0,1:].std(dtype='float')
-threshold_val_AF8 = primary_power_45_70Hz[1,1:].median(dtype='float')+ 1*primary_power_45_70Hz[1,1:].std(dtype='float')
-threshold_val_FT7 = primary_power_45_70Hz[2,1:].median(dtype='float')+ 1*primary_power_45_70Hz[2,1:].std(dtype='float')
-threshold_val_FT8 = primary_power_45_70Hz[3,1:].median(dtype='float')+ 1*primary_power_45_70Hz[3,1:].std(dtype='float')
-thresd_val = [threshold_val_AF7, threshold_val_AF8, threshold_val_FT7, threshold_val_FT8]
+#Step 1 :Finding the threshold val without simulated data.
+
+threshold_val_AF7 = primary_power_45_70Hz[0,1:].mean(dtype='float')
+threshold_val_AF8 = primary_power_45_70Hz[1,1:].mean(dtype='float')
+threshold_val_FT7 = primary_power_45_70Hz[2,1:].mean(dtype='float')
+threshold_val_FT8 = primary_power_45_70Hz[3,1:].mean(dtype='float')
+ 
+#threshold_val_AF7 = primary_power_45_70Hz[0,1:].mean(dtype='float')+ 1*primary_power_45_70Hz[0,1:].std(dtype='float')
+#threshold_val_AF8 = primary_power_45_70Hz[1,1:].mean(dtype='float')+ 1*primary_power_45_70Hz[1,1:].std(dtype='float')
+#threshold_val_FT7 = primary_power_45_70Hz[2,1:].mean(dtype='float')+ 1*primary_power_45_70Hz[2,1:].std(dtype='float')
+#threshold_val_FT8 = primary_power_45_70Hz[3,1:].mean(dtype='float')+ 1*primary_power_45_70Hz[3,1:].std(dtype='float')
+threshold_val = [threshold_val_AF7, threshold_val_AF8, threshold_val_FT7, threshold_val_FT8]
+
 
 #Using simulated data: Will do later
 
 
 #Step 2 :Finding the channel epoch indices which are greater than threshold
-chan_epoch_indice_primary = np.zeros((len(primary_raw.ch_names),50),dtype='int')
+chan_epoch_indice_primary = np.zeros((len(primary_raw.ch_names),100),dtype='int')
 
 for chan in range(len(primary_raw.ch_names)):
     for epoch in range(50):
-        if primary_power_45_70Hz[chan,epoch] > threshold_val[chan]:
+        if primary_power_45_70Hz[chan,epoch] > threshold_val:
             chan_epoch_indice_primary[chan,epoch] = epoch 
 
 chan_epoch_indices_AF7 = np.zeros((len(AF7_raw.ch_names),50),dtype='int')
@@ -173,22 +183,22 @@ for idx in chan_epoch_indice_primary:
     if  chan_epoch_indice_primary.any() == 0:
         for chan in range(len(AF7_raw.ch_names)):
             for epoch in range(50):
-                if AF7_power_45_70Hz[chan,epoch] >threshold_val:
+                if AF7_power_45_70Hz[chan,epoch] >threshold_val[0]:
                     chan_epoch_indices_AF7[chan,epoch] = epoch
     elif chan_epoch_indice_primary.any() == 1:
         for chan in range(len(AF8_raw.ch_names)):
             for epoch in range(50):
-                if AF8_power_45_70Hz[chan,epoch] >threshold_val:
+                if AF8_power_45_70Hz[chan,epoch] >threshold_val[1]:
                     chan_epoch_indices_AF8[chan,epoch] = epoch
     elif chan_epoch_indice_primary.any() == 2:
         for chan in range(len(FT7_raw.ch_names)):
             for epoch in range(50):
-                if AF8_power_45_70Hz[chan,epoch] >threshold_val:
+                if AF8_power_45_70Hz[chan,epoch] >threshold_val[2]:
                     chan_epoch_indices_FT7[chan,epoch] = epoch
     elif chan_epoch_indice_primary.any() == 3:
         for chan in range(len(FT7_raw.ch_names)):
             for epoch in range(50):
-                if AF8_power_45_70Hz[chan,epoch] >threshold_val:
+                if AF8_power_45_70Hz[chan,epoch] >threshold_val[3]:
                     chan_epoch_indices_FT7[chan,epoch] = epoch
 print('thres_mara')
     

@@ -1,7 +1,8 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\3_power_analysis"
   ],
-  "SelectedNode": "\\power_analysis.py",
+  "SelectedNode": "\\3_power_analysis\\power_analysis.py",
   "PreviewInSolutionExplorer": false
 }
