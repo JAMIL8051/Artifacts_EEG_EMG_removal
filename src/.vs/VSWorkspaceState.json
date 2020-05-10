@@ -1,8 +1,9 @@
 {
   "ExpandedNodes": [
     "",
-    "\\3_power_analysis"
+    "\\main",
+    "\\preprocessing"
   ],
-  "SelectedNode": "\\3_power_analysis\\power_analysis.py",
+  "SelectedNode": "\\main\\EegArtifactAnalyzer.py",
   "PreviewInSolutionExplorer": false
 }

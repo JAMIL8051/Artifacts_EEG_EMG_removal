@@ -1003,54 +1003,7 @@ def print_matrix(T):
     return None
 
 
-def rcanonical(data1,data2):
-    nSamples = len(data1)
-    train1 = data1[:int(nSamples//2)]
-    train2 = data2[:int(nSamples//2)]
-    
-    test1 = data1[int(nSamples//2):]
-    test2 = data2[int(nSamples//2):]
-    n_components = 3
-    cca = rcca.CCA(kernelcca = False, reg = 0., numCC = n_components)
- 
-    cca.train([train1,train2])
-    testcorrs = cca.validate([test1,test2])
 
-    plt.plot(np.arrange(n_components)+1, cca.cancorrs, 'ko')
-    plt.xlim(0.5, 0.5+n_components)
-    plt.xticks(np.arange(n_components)+1)
-    plt.xlabel('Canonical component')
-    plt.ylabel('Canonical correlattions')
-    plt.title('Canonical correlations')
-    print('''The canonical correlations are:\n
-    Component 1: %0.02f\n
-    Component 2: %0.02f\n
-    Component 3: %0.02f\n
-    ''' %tuple(cca.cancorrs))
-    nTicks = max(testcorrs[0].shape[0],testcorrs[1].shape[0])
-    bmap1 =qualitative.Dark2_3
-    plt.plot(np.arange(testcorrs[0].shape[0])+1, testcorrs[0], 'o', color = bmap1.mpl_colors[0])
-    plt.plot(np.arange(testcorrs[1].shape[0])+1, testcorrs[1], 'o', color = bmap1.mpl_colors[1])
-    plt.xlim(0.5, 0.5 + nTicks + 3)
-    plt.ylim(0.0, 1.0)
-    plt.xticks(np.arange(nTicks)+1)
-    plt.xlabel('Dataset dimension')
-    plt.ylabel('Prediction correlation')
-    plt.title('Prediction accuracy')
-    plt.legend(['Dataset 1', 'Dataset 2'])
-    print('''The prediction accuracy for the first dataset is:\n
-    Dimension 1: %.02f\n
-    Dimension 2: %.02f\n
-    Dimension 3: %.02f\n
-    '''% tuple(testcorrs[0]))
-    print('''The prediction accuracy for the second dataset is:\n
-    Dimension 1: %.02f\n
-    Dimension 2: %.02f\n
-    Dimension 3: %.02f\n
-    '''% tuple(testcorrs[1]))
-    #cca.fit(data1,data2)
-    #X_c, Y_c = cca.transform(data1,data2)
-    return None
 
 
 
