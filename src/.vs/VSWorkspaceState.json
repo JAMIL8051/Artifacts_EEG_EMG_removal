@@ -1,9 +1,10 @@
 {
   "ExpandedNodes": [
     "",
-    "\\main",
-    "\\preprocessing"
+    "\\other_python_files",
+    "\\preprocessing",
+    "\\randomization_statisitcs"
   ],
-  "SelectedNode": "\\main\\PowerAnalysis.py",
+  "SelectedNode": "\\other_python_files\\Analysis_73_chans.py",
   "PreviewInSolutionExplorer": false
 }

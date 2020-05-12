@@ -41,7 +41,7 @@ def pls(data, task_condition, exclude_task, condition, n_subject,n_ch):
         val = val + temp
         val = val[:,0:n_condition-1]
         contrast_mat = np.tril(val, k=0)
-        design_mat[i,:,:] = contrast_mat
+        design_mat[subject,:,:] = contrast_mat
 
     design_mat = design_mat.reshape((n_subject*n_condition,n_condition-1))
 
