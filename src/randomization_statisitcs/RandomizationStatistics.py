@@ -61,7 +61,7 @@ def normalized_vector(u):
     return norm_u
 
 
-def test_topography_consistancy(data1, data2):
+def testTopographyConsistancy(data1, data2):
     #This function test the topographic consistency among the maps of the two groups:accross the two groups
     
     data = np.concatenate((data1,data2), axis = 0)# Here axis=0/1 will depend whether we shuffle potential 
@@ -92,7 +92,7 @@ def test_topography_consistancy(data1, data2):
     return gfp_after_shuffle
 
 
-def comparison_map_diff_between_two_conditions(data1,data2):
+def comparisonMapDiffBetweenTwoConditions(data1,data2):
     mean_data1 = np.mean(data1,axis = 0,keepdims = True)
     mean_data2 = np.mean(data2,axis = 0,keepdims = True)
     diff_map = mean_data1 - mean_data2
@@ -159,7 +159,7 @@ def shuffle_data(data, n_condition):
     return data
 
 
-def comparison_map_diff_across_conditions(data, condition, n_subject, n_ch, ith_class):
+def comparisonMapDiffAcrossConditions(data, condition, n_subject, n_ch, ith_class):
     data_temp = format_data(data, condition, n_subject, n_ch, ith_class) 
     data = data_temp    
     grand_mean_across_subjects = np.mean(data, axis=0)
@@ -190,10 +190,11 @@ def comparison_map_diff_across_conditions(data, condition, n_subject, n_ch, ith_
     return rand_effect_size
 
 
-def effects_conditions(data1,data2,data3):
-#This function shows: a) The effect for selection of bad channels as group 
-#b) Effect for group1 and group 2 channels to see whether these are of bad channels group 
-#c) Effect of interaction of these two factors:Bad channels group and group1,group2 channels
+def effectsConditions(data1,data2,data3):
+    #This function shows: a) The effect for selection of primary channels as group 
+    #b) Effect for right group and left group channels to see whether these are of primary channels group 
+    #c) Effect of interaction of these two factors: Primary channels group, right group and 
+    #left group2 channels
     
     data = np.concatenate((data1,data2,data3), axis = 0)
     grand_mean = np.mean(data,axis = 0)
@@ -240,21 +241,21 @@ def effects_conditions(data1,data2,data3):
         if rand_effect_size[i]>=obs_effect_size:
             count_con1 = count_con1+1
     percentage = count_con1/5000
-    print('\nThe probability of the null hypothesis for bad channels group factor:{}'.format(count_con1))
+    print('\nThe probability of the null hypothesis for primary channels group factor:{}'.format(count_con1))
     
     count_con2 = 0
     for i in range(0,len(rand_effect_size)):
         if rand_effect_size1[i]>=obs_effect_size:
             count_con2 = count_con2 +1
     percentage1 = count_con2/5000
-    print('\nThe probability of the null hypothesis for channels group 1 factor:{}'.format(count_con2))
+    print('\nThe probability of the null hypothesis for channels group left factor:{}'.format(count_con2))
     
     count_con3 = 0
     for i in range(0,len(rand_effect_size)):
         if rand_effect_size2[i]>=obs_effect_size:
             count_con3  = count_con3 +1
     percentage2 = count_con3/5000
-    print('\nThe probability of the null hypothesis for channels group 2 factor:{}'.format(count_con3))
+    print('\nThe probability of the null hypothesis for channels group right factor:{}'.format(count_con3))
 
     return percentage, percentage1, percentage2
 
@@ -280,21 +281,21 @@ def freq_effects_test(data1,data2,data3,p=1):
         if data1[i]>=first_run1:
             pseudo_sig1=pseudo_sig1+1
     percentage_freq1 = pseudo_sig1/len(data1)
-    plt.hist2d(pseudo_sig1, bins = 10)
+    plt.hist2d(pseudo_sig1, np.linspace(0,5000,10), bins = 10)
     plt.show()
 
     for i in range(1,len(data2)):
         if data2[i]>=first_run2:
             pseudo_sig1=pseudo_sig1+1
     percentage_freq2 = pseudo_sig1/len(data2)
-    plt.hist(pseudo_sig2, bins = 10)
+    plt.hist(pseudo_sig2,np.linspace(0,5000,10), bins = 10)
     plt.show()
 
     for i in range(1,len(data3)):
         if data1[i]>=first_run1:
             pseudo_sig1=pseudo_sig1+1
     percentage_freq3 = pseudo_sig1/len(data3)
-    plt.hist(pseudo_sig3, bins = 10)
+    plt.hist(pseudo_sig3,np.linspace(0,5000,10), bins = 10)
     plt.show()
 
     return percentage_freq1, percentage_freq2, percentage_freq3
