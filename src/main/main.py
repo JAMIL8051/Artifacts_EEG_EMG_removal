@@ -1,7 +1,7 @@
 """
 @Author: Jamil Reza Chwodhury
 Department of Electrical and Computer Engineering 
-Concordia Unicersity, Montreal, QC Canada
+Concordia University, Montreal, QC Canada
 """
 
 """The main function to call for the analysis and removal of EMG artifacts from EEG 
@@ -32,6 +32,7 @@ def main():
 
     #visualizer.visualize(result)
 
-main()
+if __name__ == '__main__':
+    main()
 
 

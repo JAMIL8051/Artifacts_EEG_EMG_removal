@@ -1,10 +1,11 @@
 {
   "ExpandedNodes": [
     "",
-    "\\other_python_files",
-    "\\preprocessing",
-    "\\randomization_statisitcs"
+    "\\main",
+    "\\microstate_analysis",
+    "\\randomization_statisitcs",
+    "\\visualization"
   ],
-  "SelectedNode": "\\other_python_files\\Analysis_73_chans.py",
+  "SelectedNode": "\\main\\EegArtifactAnalyzer.py",
   "PreviewInSolutionExplorer": false
 }

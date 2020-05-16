@@ -3,6 +3,24 @@ import numpy as np
 import mne
 
 
+def visualize(raw):
+
+    raw.plot(block= True, lowpass= 40)
+    raw.plot(butterfly= True, group_by='position')
+
+    #Visualizing the location of the channels
+    raw.plot_sensors(kind='3d', ch_type='eeg', ch_groups='position')
+    raw.plot()
+    raw.plot_psd(tmax = 60, average=False)
+
+
+    layout = mne.channels.read_layout('biosemi64')
+    layout.plot()
+    raw.plot_psd_topo(tmax=30., fmin=45., fmax=75., n_fft=1024, layout=layout)
+    
+    return None
+
+
 #Plotting the detected EOG events 
 def print_average_eog(average_eog):
     print('We found %i EOG events' % average_eog.nave)
