@@ -31,8 +31,8 @@ def main():
     results = EegArtifactAnalyzer.detectAndRemoveEegArtifact(filepath)
 
     #visualizer.visualize(result)
+    return None
 
-if __name__ == '__main__':
-    main()
+main()
 
 

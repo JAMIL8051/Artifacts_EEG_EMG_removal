@@ -7,9 +7,10 @@ import PowerAnalysis
 
 def detectArtifacts(filepath):
 	raw = preprocessor.preprocessRawData(filepath)
-	dataWithArtifactsDetected, dataWithArtifactsDetectedRaw = PowerAnalysis.identifyArtifacts(raw)
-	return dataWithArtifactsDetected, dataWithArtifactsDetectedRaw
-
+	#dataWithArtifactsDetected, dataWithArtifactsDetectedRaw = PowerAnalysis.identifyArtifacts(raw)
+	finalEmgData = PowerAnalysis.identifyArtifacts(raw)
+	#return dataWithArtifactsDetected, dataWithArtifactsDetectedRaw
+	return finalEmgData
 
 #Function to remove the EMG artifacts using microstate analysis and
 #randomization statistics
