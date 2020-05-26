@@ -94,13 +94,13 @@ def read_edf(filename):
 
 #Channels location file reader function
 def read_xyz(filename):
-#    """Read EEG electrode locations in xyz format
-#
-#    Args:
-#        filename: full path to the '.xyz' file
-#    Returns:
-#        locs: n_channels x 3 (numpy.array)
-#    """
+    """Read EEG electrode locations in xyz format
+
+    Args:
+        filename: full path to the '.xyz' file
+    Returns:
+        locs: n_channels x 3 (numpy.array)
+    """
     ch_names = []
     locs = []
     with open(filename, 'r') as f:
@@ -116,15 +116,15 @@ def read_xyz(filename):
 
 
 def findstr(s, L):
-#    """Find string in list of strings, returns indices.
-#
-#    Args:
-#        s: query string
-#        L: list of strings to search
-#    Returns:
-#        x: list of indices where s is found in L
-#    """
-#
+    """Find string in list of strings, returns indices.
+
+    Args:
+        s: query string
+        L: list of strings to search
+    Returns:
+        x: list of indices where s is found in L
+    """
+
     x = [i for i, l in enumerate(L) if (l==s)]
     return x
 
@@ -238,7 +238,7 @@ def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
     """
     n_t = data.shape[0]
     n_ch = data.shape[1]
-    data = data - data.mean(axis=1, keepdims = True)
+    data = data - data.mean(axis = 1, keepdims = True)
 
     # GFP peaks
     gfp = np.std(data, axis=1)

@@ -1,3 +1,9 @@
+import EegArtifactAnalyzer
+from tkinter import filedialog
+import tkinter as tk
+
+
+
 """
 @Author: Jamil Reza Chwodhury
 Department of Electrical and Computer Engineering 
@@ -12,10 +18,6 @@ The basic steps of this main file are:
 1. Takes the fully specified absolute filepath as input from the user
 Calls the artifact_detection_and_removal function.
 """
-
-from tkinter import filedialog
-import tkinter as tk
-import EegArtifactAnalyzer
 
 
 #Simple take the filepath from the user and calls the eeganalyzer to detecta nd remove the artifacts 

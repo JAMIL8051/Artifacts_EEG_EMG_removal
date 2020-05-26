@@ -256,23 +256,5 @@ def plot_segmentation(segmentation, data, times):
 
 
 
-def plot_maps(maps, info):
-    """Plot prototypical microstate maps.
 
-    Parameters
-    ----------
-    maps : ndarray, shape (n_channels, n_maps)
-        The prototypical microstate maps.
-    info : instance of mne.io.Info
-        The info structure of the dataset, containing the location of the
-        sensors.
-    """
-    
-    
-    layout = mne.channels.find_layout(info)
-    a = layout.pos[:, :2]
-    for i, map in enumerate(maps):
-        plt.figure(figsize=(6* len(maps), 6))
-        plt.subplot(1, len(maps), i+1)
-        mne.viz.plot_topomap(map, layout.pos[:, :2])
-#        plt.title('%d' % i)
+

@@ -3,9 +3,8 @@
     "",
     "\\main",
     "\\microstate_analysis",
-    "\\randomization_statisitcs",
     "\\visualization"
   ],
-  "SelectedNode": "\\main\\PowerAnalysis.py",
+  "SelectedNode": "\\microstate_analysis\\MicrostateAnalyzer.py",
   "PreviewInSolutionExplorer": false
 }
