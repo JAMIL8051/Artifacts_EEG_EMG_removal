@@ -68,8 +68,9 @@ def testTopographyConsistancy(data1, data2):
     #values of same electrode/channel or just reshuffle electordes. If potential values then axis=0 else 1 
     #for reshuffle of electrodes/channels.
     
-    observed_grand_mean = np.mean(data, axis = 0)
-    gfp_observed_grand_mean = np.std(observed_grand_mean)
+    observed_grand_mean = np.mean(data, axis = 1)# Gfp calculate korar jonno mean ta electrodes 
+    #borabor e nite hobe
+    gfp_observed_grand_mean = np.std(observed_grand_mean, axis = 1, keepdims =True)
     gfp_after_shuffle = np.zeros(5000)
 
     for i in range(5000):
@@ -93,13 +94,13 @@ def testTopographyConsistancy(data1, data2):
 
 
 def comparisonMapDiffBetweenTwoConditions(data1,data2):
-    mean_data1 = np.mean(data1,axis = 0,keepdims = True)
-    mean_data2 = np.mean(data2,axis = 0,keepdims = True)
-    diff_map = mean_data1 - mean_data2
+    mean_data1 = np.mean(data1,axis = 1,keepdims = True)
+    mean_data2 = np.mean(data2,axis = 1,keepdims = True)
+    diff_map = data1 - data2
     #norm_mean_data1 = normalized_vector(mean_data1)
     #norm_mean_data2 = normalized_vector(mean_data1)
     #norm_diff_map = norm_mean_data1 - norm_mean_data2
-    gfp_diff_map = np.std(diff_map)
+    gfp_diff_map = np.std(np.mean(diff_map, axis=1,keepdims =True), keepdims = True)
     #gmd = np.std(norm_diff_map) # Global map dissimilarity
     rand_gfp_diff_map =np.zeros(5000)
     #Concatenate data

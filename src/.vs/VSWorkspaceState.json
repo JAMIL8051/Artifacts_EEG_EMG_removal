@@ -1,8 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\main",
     "\\microstate_analysis",
+    "\\randomization_statisitcs",
     "\\visualization"
   ],
   "SelectedNode": "\\microstate_analysis\\MicrostateAnalyzer.py",
