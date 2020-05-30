@@ -5,6 +5,6 @@ def channels():
     
     region = ['Left Frontalis', 'Right Frontalis', 'Left Temporalis', 'Right Temporalis']
 
-    
+   
     return channelNamesMap, region
 

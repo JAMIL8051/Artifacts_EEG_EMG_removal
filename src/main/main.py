@@ -24,7 +24,7 @@ Calls the artifact_detection_and_removal function.
 #and finally visualize the clean data using the visualizer.
 
 def main():
-    print("Please enter the full path of the raw data file. The format should be bfd or edf")
+    print("Please enter the full path of the raw data file. The format should be bdf or edf or vhdr")
     root = tk.Tk()
     root.withdraw()
     filepath  = filedialog.askopenfilename()
