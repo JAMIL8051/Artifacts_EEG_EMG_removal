@@ -1,7 +1,6 @@
 import os
 import os.path
-from src.main import ConfigFile
-
+from src.main import Configuration
 import numpy as np
 import ModifiedKmeans as kmeans
 import MicrostateMapsAnalysis
@@ -10,7 +9,7 @@ import stat
 
 # The function segement the data in to test and train data for micro state analysis
 def segmentData(raw):
-    channelNamesMap, region = ConfigFile.channels()
+    channelNamesMap, region = Configuration.channels()
     ch_list = []
 
     for key in channelNamesMap:
@@ -24,59 +23,59 @@ def segmentData(raw):
     trainData = data[:len(times)//2,:]
     testData = data[len(times)//2:,:]
 
-    return trainData, testData, channelNamesMap
+    return trainData, testData, channelNamesMap, channels
 
 
 # Function to find the optimal number of clusters
+def calcMeanCorrelation(testData, trainData, n_maps):
+    
+    meanCorrelationList = []
+
+    for i in range(ConfigFile.repetitonsCount()):
+        randomMaps = kmeans(trainData, n_maps, n_runs = 10, maxerr = 1e-6, 
+                                          maxiter = 1000, doplot = False)
+        correlation = ((np.cov(testData,randomMaps))/(np.var(testData)*np.var(randomMaps)))
+        meanCorrelation = np.mean(correlation)
+        meanCorrelationList.append(meanCorrelation)
+        avgMeanCorrelation = np.mean(np.array(meanCorrelationList))
+    
+    return avgMeanCorrelation
+
 def findOptimalCluster(trainData, testData):
     n_maps = 3
-    gev_list = {}
-    cv_list = {}
-    gev_val = []
-    cv_val = []
     meanCorrelation ={}
-    while n_maps < 11:
+    maxTotalGev = -1
+    optimalCluster = -1
+    optimalCluster1 = -1
+    minCv = np.Infinity
+    avgMeanCorrelationList = []
+    maxCorrelation = -1
+    while n_maps <= ConfigFile.numberOfCluster():
         # Process with finding optimal number cluster using gev and cv concept
         maps, labels, gfp_peaks, gev, cv = kmeans(trainData, n_maps, n_runs = 10, maxerr = 1e-6, 
                                               maxiter = 1000, doplot = False)
-        gev_list[str(sum(gev))] = n_maps
-        cv_list[str(cv)] = n_maps
-        gev_val.append(sum(gev))
-        cv_val.append(cv)
-        avgMeanCorrelationList = []
-        meanCorrelationList = []
-        # Method for selection of optimal microstate model with test data parameter
-        for i in range(250):
-            maps, labels, gfp_peaks, gev, cv = kmeans(trainData, n_maps, n_runs = 10, maxerr = 1e-6, 
-                                              maxiter = 1000, doplot = False)
-            correlation = ((np.cov(testData,maps))/(np.var(testData)*np.var(maps)))
-            meanCorrelation = np.mean(correlation)
-            meanCorrelationList.append(meanCorrelation)
+        totalGev = sum(gev)
 
-        avgMeanCorrelation = np.mean(np.array(meanCorrelationList))
-        avgMeanCorrelationList.append(avgMeanCorrelation)
-        meanCorrelation[str(n_maps)] = avgMeanCorrelation
+        if totalGev > maxTotalGev:
+            optimalCluster = n_maps
+            maxTotalGev = totalGev
+
+        if cv < min_cv:
+            optimalCluster1 = n_maps
+            minCv = cv 
        
+        # Method for selection of optimal microstate model with test data parameter
+        avgMeanCorrelation = calcMeanCorrelation(testData, trainData, n_maps)
+        
+        if avgMeanCorrelation > maxCorrelation:
+            optimalNumberOfCluster = n_maps
+            maxCorrelation = avgMeanCorrelation
+            
         n_maps += 1
-        
-    
-    for key in gev_list:
-        if key == str(max(gev_val)):
-            opt_cluster = gev_list[key]
+      
+    return opt_cluster1, optimalNumberOfCluster
 
-    for key in cv_list:
-        if key == str(min(cv_val)):
-            opt_cluster1 = cv_list[key]
-
-    for key in meanCorrelation:
-        if meanCorrelation[key] == np.max(avgMeanCorrelationList):
-            optimalNumberOfCluster = int(key)
-    
-    
-        
-    return opt_cluster, opt_cluster1, optimalNumberOfCluster
-
-
+# Function to analyze the data on EEG microstate analysis
 def analyzeMicrsotate(raw, artifactualData):
     #Setting the Bio Semi 64 channel montage
     raw.set_montage('biosemi64')
@@ -85,11 +84,11 @@ def analyzeMicrsotate(raw, artifactualData):
     raw.pick_types(meg=False, eeg=True, eog = False, stim = False)
     
     # Data segmentation
-    trainData, testData, channelNamesMap = segmentData(raw)
+    trainData, testData, channelNamesMap, channels = segmentData(raw)
     # Determining the optimal number of clusters from the data of the EMG artifact prone regions
     opt_cluster, opt_cluster1, optimalNumberOfCluster = findOptimalCluster(trainData, testData)
 
-     # Main_part: Region wise microstate analysis: Both contamiated data and data for testing contamination
+     # Main_part: Region wise microstate analysis: Both contaminated data and data for testing contamination
     # Microstate analysis on the detected artifactual data epochs on the basis of regions using CV technique
     # also optimal number of microstate model technique 
   
@@ -107,34 +106,45 @@ def analyzeMicrsotate(raw, artifactualData):
                                                                            maxiter = 1000, doplot = False)
         mapsRegion[key] = maps
         modelMapsRegion[key] = modelMaps
+
         labelsRegion[key] = labels
         modelLabelsRegion[key] = modelLabels
+    
         
-    #Application microstate analysis on the channelNamesMap regions: Test data from preprocessed raw data using 
-    #Cv technique   
-    ch_list = []
-    mapsRegional = {}
-    modelMapsRegional = {}
-    labelsRegional = {}
-    modelLabelsRegional = {}
+
+    # Application on the primary electrodes:
+    primaryChannels =[]
     for key in channelNamesMap:
         if key!='Fz':
-            ch_list.append(channelNamesMap[key])
-            data = raw.pick_channels(ch_names = channelNamesMap[key]).get_data()
-            maps, labels, gfp_peaks, gev, cv = kmeans(data, n_maps = opt_cluster1, 
-                                                                  n_runs = 10, maxerr = 1e-6, 
-                                              maxiter = 1000, doplot = False)
-            modelMaps, modelLabels, modelGfp_peaks, modelGev, modelCv = kmeans(data, 
-                                                                           n_maps = optimalNumberOfCluster, 
-                                                                           n_runs = 10, 
-                                                                           maxerr = 1e-6, 
-                                                                           maxiter = 1000, doplot = False)
-            mapsRegional[key] = maps
-            modelMapsRegional[key] = modelMaps
-            labelsRegional[key] = labels
-            modelLabelsRegional[key] = modelLabels
+            primaryChannels.append(key)
+    primaryData = raw.pick_channels(ch_names = primaryChannels).get_data()
+     # Cv technique
+    primaryMaps,primaryLabels =kmeans(primaryData, n_maps = opt_cluster1, n_runs = 10, maxerr = 1e-6, 
+                                        maxiter = 1000, doplot = False)
+
+    # Micorstate model technique
+    modelPrimaryMaps, modelPrimaryLabels = kmeans(primaryData, n_maps = optimalNumberOfCluster,n_runs = 10, 
+                                                  maxerr = 1e-6, maxiter = 1000, doplot = False)
+   
+    # Application microstate analysis on the combined channels(20 channels in total): 
+    # Test data from preprocessed raw data using: 
+    
+    # Cv technique
+    combinedData = raw.pick_channels(ch_names = channels).get_data()
+    mapsCombined, labelsCombined, gfp_peaks, gev, cv = kmeans(combinedData, n_maps = opt_cluster1, 
+                                                            n_runs = 10, maxerr = 1e-6, 
+                                        maxiter = 1000, doplot = False)
+
+    # Micorstate model technique
+    modelMapsCombined, modelLabelsCombined, modelGfp_peaks, modelGev, modelCv = kmeans(combinedData, 
+                                                                    n_maps = optimalNumberOfCluster, 
+                                                                    n_runs = 10, 
+                                                                    maxerr = 1e-6, 
+                                                                    maxiter = 1000, doplot = False)
+    # Pore dekhbo
+    return None
             
-    return mapsRegion, modelMapsRegion, labelsRegion, modelLabelsRegion, mapsRegional, modelMapsRegional, labelsRegional, modelLabelsRegional
+    #return mapsRegion, modelMapsRegion, labelsRegion, modelLabelsRegion, mapsCombined, labelsCombined, modelMapsCombined, modelLabelsCombined   
     
 
 

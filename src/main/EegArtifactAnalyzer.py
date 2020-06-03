@@ -1,4 +1,3 @@
-import ConfigFile
 import EegPreprocessor as preprocessor
 import PowerAnalysis
 import numpy as np

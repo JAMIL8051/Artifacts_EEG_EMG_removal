@@ -304,27 +304,4 @@ def freq_effects_test(data1,data2,data3,p=1):
 
 
 
-#Spatial analysis function
-def spatial_derivative(data_bad, data_grp1):
-    data = data_bad
-    x = np.linspace(1,len(data), num = len(data))
-    data2 = np.empty((len(data),1),dtype = float, order ='F')
-    for i in range(len(data)-1):
-        data2[i] =data[i+1]-data[i]
-    
-    data3 = data2
-    data4 = np.empty((len(data),1),dtype = float, order='F')
-    for i in range(len(data)-1):
-        data4[i] = data3[i+1]-data[i]
-    
-    data_grp1_2 = np.empty((len(data),1),dtype = float, order ='F')
-    for i in range(len(data)-1):
-        data2[i] =data_grp1[i+1]-data_grp1[i]
-    
-    data_grp1_3 = data_grp1_2
-    
-    data_grp1_4 = np.empty((len(data),1),dtype = float, order='F')
-    for i in range(len(data)-1):
-        data4[i] = data_grp1_3[i+1]-data_grp1_3[i]
-    
-    return x,data2, data4, data_grp1_2,data_grp1_4
+

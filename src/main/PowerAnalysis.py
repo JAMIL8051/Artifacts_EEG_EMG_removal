@@ -1,4 +1,4 @@
-import ConfigFile
+import Configuration
 import numpy as np
 import mne
 
@@ -78,7 +78,7 @@ def identifyArtifacts(raw):
 	input parameter: raw object only from MNE library Python
 	"""
 	# getting the channels map as dictionary from config file region as a list
-	channelNamesMap, region = ConfigFile.channels()
+	channelNamesMap, region = Configuration.channels()
 	channelNamesPrimary = []
 	ch_names_list = []
 	for key in channelNamesMap:
