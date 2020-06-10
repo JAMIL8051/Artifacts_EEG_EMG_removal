@@ -35,6 +35,9 @@ def channels():
    
     return channelNamesMap, region
 
+# We used Bio-semi 64 electrode layout system. Other can be given like 10-20 system 10-10 sytem as well.
+def channelLayout():
+    return 'biosemi64'
 # Parameters needed for conducting the microstate analysis.
  
 """
@@ -52,7 +55,21 @@ Thomas Koenig • Maria Stein • Matthias Grieder •
 Mara Kottlow. Brain Topogr (2014) 27:72–83 DOI 10.1007/s10548-013-0310-1
 """    
 def repetitonsCount():
-    return 250 
+    return 250
 
+
+# Two condition of data: Contaminated data detected through power analysis and 
+# rest of data being non-contaminated
+def conditionForStatAnalysis():
+    condition=['contaminated','non-contaminated']
+    return condition 
+
+# Parameters for comparing the groups done region wise using the region parameter as mentioned early and 
+# channel wise grouping: Primary channels only and channels combining the regions 
+# excluding the primary channels
+
+def groupForStatAnalysis():
+    group =['region','channel']
+    return group
 
 
