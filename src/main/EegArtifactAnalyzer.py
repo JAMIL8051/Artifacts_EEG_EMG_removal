@@ -1,7 +1,11 @@
 import EegPreprocessor as preprocessor
 import PowerAnalysis
+import Configuration
 import numpy as np
 import mne
+import MicrostateAnalyzer
+import RandomizationStatistics
+
 
 #Function to detect the EMG artifacts from the frontalis and temporal brain region after preprocessing
 #using the power analysis in the 45-70Hz frequency band
@@ -29,9 +33,8 @@ def formatForMicrostate(raw, dataWithArtifactsDetected, ch_names_combined):
 	dataWithArtifactsDetected = dataWithArtifactsDetected[0:n_time_points].reshape(time_points_channel, 
 																				n_channels)
 	
-	sampling_rate = raw.info['sfreq']
-	info = mne.create_info(ch_names = ch_names_combined, sfreq = sampling_rate, 
-						ch_types= ['eeg'], montage = 'biosemi64')
+	info = mne.create_info(ch_names = ch_names_combined, sfreq = raw.info['sfreq'], 
+						ch_types= ['eeg']*20)
 	
 	dataWithArtifactsDetectedRaw = mne.io.RawArray(dataWithArtifactsDetected.T, info)
 	
@@ -42,31 +45,32 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, backfit=True
 					interpolate = False):
 	# First step: Find optimal number of microstate classes
 	# Doing the microstate analysis to generate the optimal number of microstate classes
-	opt_cluster1, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(raw)
-
-	# Conduct randomized statistics with help of quantifiers of microstate classes or maps 
-	# to generate the significantly different maps with labels for backfit and 
-	# significantly not different ones for interpolation
-	sigDiffMapLabel, sigNotDiffMapLabel = RandomizationStatistics.randomizationStat(raw, 
-											rawWithArtifactsDetected, 
-											artifactualData, 
-											opt_cluster1, 
-											optimalNumberOfCluster)
+	meanData, optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate()
+	# Conduct randomized statistics with help of quantifiers of microstate classes or maps to generate the 
+	# significantly different maps with labels for backfit and significantly not different ones for interpolation
+	sigDiffMapLabel, sigNotDiffMapLabel = RandomizationStatistics.randomizationStat(raw, rawWithArtifactsDetected,
+																				 artifactualData, optimalNumberOfCluster)
 
 	# Main criteria to preserve the data epochs or microstates
 	if backfit:
-		backFitResult = BackFit.backFit(raw.get_data(), sigDiffMapLabel)
+		backFitResult = BackFit.backFit(meanData, optimalMaps, sigDiffMapLabel)
+		
+		# Can be done in another way: Call Modified K means/findEffect function and take maps variable condition wise and 
+		# fit the maps using the sigDiffMapLabel as obtained from randomization 
+		
 
 	# Optional for now!!
 	if interpolate:
-		interploateResult = interpolate(sigNotDiffMapLabel)
+		interploateResult = interpolate(meanData, optimalMaps, sigNotDiffMapLabel)
+		
+		# Can be done in another way: Same strategy as used in backfit of data.
 	
 	return backFitResult, interploateResult
 
 
-#Function to detect EMG contaminated EEG segments after standard preprocessing of the data and then conducting
-#power analysis in the 45-70Hz frequency band and to remove those artifactual segments by doing micrsotate 
-#analysis and randomization statistics.
+#Function to detect EMG contaminated EEG segments after standard preprocessing of the data and 
+#then conducting power analysis in the 45-70Hz frequency band and to remove those artifactual 
+#segments by doing micrsotate analysis and randomization statistics.
 
 def detectAndRemoveEegArtifact(filepath, backfit=True, interpolate= False, validation=False, 
 								   comparison= False, visualize=False):
@@ -78,17 +82,20 @@ def detectAndRemoveEegArtifact(filepath, backfit=True, interpolate= False, valid
 	rawWithArtifactsDetected = formatForMicrostate(raw, dataWithArtifactsDetected, ch_names_combined)
 	
 	# Function to remove the EMG artifacts
-	backFitResult, interploateResult = removeArtifact(raw, rawWithArtifactsDetected, 
-												   artifactualData, backfit, interpolate)
-	
+	backFitResult, interploateResult = removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, backfit, interpolate)
+	# End of data analysis
+
+
+	# For validation purpose with simulated EEG data
 	if validation:
 		validateWithSimulatedData()
 
+	# For standard comparison with other method like: ICA+MARA 
 	if comparison:
 		compareWithIcaMara()
 
+	# Display of all the results and generation of report of the analysis
 	if visualize:
 		visualization()
-
 
 	return None	

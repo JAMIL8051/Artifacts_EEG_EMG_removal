@@ -45,6 +45,8 @@ def calcMeanCorrelation(testData, trainData, n_maps):
 # Function to find the optimal number of clusters
 def findOptimalCluster(data, trainData, testData):
     n_maps = 3
+    optimalMaps1 = []
+    optimalModelMaps =[]
     meanCorrelation ={}
     maxTotalGev = -1
     optimalCluster = -1
@@ -60,10 +62,12 @@ def findOptimalCluster(data, trainData, testData):
 
         if totalGev > maxTotalGev:
             optimalCluster = n_maps
+            #optimalMaps.append(maps)
             maxTotalGev = totalGev
 
         if cv < min_cv:
             optimalCluster1 = n_maps
+            optimalMaps1.append(maps)
             minCv = cv 
        
         # Method for selection of optimal microstate model with test data parameter
@@ -71,11 +75,15 @@ def findOptimalCluster(data, trainData, testData):
         
         if avgMeanCorrelation > maxCorrelation:
             optimalNumberOfCluster = n_maps
+            optimalModelMaps.append(maps)
             maxCorrelation = avgMeanCorrelation
             
         n_maps += 1
+        optimalMaps1 = np.asarray(optimalMaps1).reshape(optimalCluster1,data.shape[1])
+        optimalModelMaps = np.asarray(optimalModelMaps).reshape(optimalNumberOfCluster,
+                                                                data.shape[1])
       
-    return opt_cluster1, optimalNumberOfCluster
+    return opt_cluster1, optimalMaps1, optimalNumberOfCluster, optimalModelMaps
 
 
 # Function to conduct EEG microstate analysis on the  raw data for finding optimal number microstate

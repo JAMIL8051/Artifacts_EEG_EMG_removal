@@ -38,6 +38,12 @@ def channels():
 # We used Bio-semi 64 electrode layout system. Other can be given like 10-20 system 10-10 sytem as well.
 def channelLayout():
     return 'biosemi64'
+
+# Names of channels for finding optimal clusters from raw data
+def channelList():
+    channelsOptimalCluster = ['Fp1', 'AF3', 'F3', 'F5', 'F7', 'Fp2', 'AF4', 'F4', 'F6', 'F8',
+                              'FC5', 'C5', 'T7', 'FC6', 'C6', 'T8']
+    return channelsOptimalCluster
 # Parameters needed for conducting the microstate analysis.
  
 """
@@ -46,7 +52,7 @@ and cross validation techiques. Ref: A Student’s Guide to Randomization
 Statistics for Multichannel Event-Related Potentials Using Ragu Marie Habermann1, Dorothea Weusmann1, Maria Stein2 and Thomas Koenig1* 1 Translational Research Center, Department of Psychiatric Neurophysiology, University Hospital of Psychiatry Bern, University of Bern, Bern, Switzerland, 2 Department of Clinical Psychology and Psychotherapy, University of Bern, Bern, Switzerland. doi: 10.3389/fnins.2018.00355   
 """
 def numberOfCluster():
-    return 10
+    return 21
 
 """
 Parameter: used in microstate analysis in detecting the maxmimum average correlation for finding the optimal 
@@ -55,13 +61,13 @@ Thomas Koenig • Maria Stein • Matthias Grieder •
 Mara Kottlow. Brain Topogr (2014) 27:72–83 DOI 10.1007/s10548-013-0310-1
 """    
 def repetitonsCount():
-    return 250
+    return 2
 
 
 # Two condition of data: Contaminated data detected through power analysis and 
 # rest of data being non-contaminated
 def conditionForStatAnalysis():
-    condition=['contaminated','non-contaminated']
+    condition = ['contaminated','non-contaminated']
     return condition 
 
 # Parameters for comparing the groups done region wise using the region parameter as mentioned early and 
