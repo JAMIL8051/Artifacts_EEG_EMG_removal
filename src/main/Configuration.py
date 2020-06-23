@@ -24,6 +24,10 @@ Cz is the reference channel by default.
 The region variable shows the names of the regions in the brain which are highly prone muscle artifacts in EEG signals
 due to frontalis and temporalis scalp muscle 
 """
+def defaultTrainDataFolder():
+
+    return  "C:/Users/J_CHOWD/Desktop/EEG_microstate_analysis_papers/TestDataN-BackLucas/*.bdf"
+
 
 def channels():
     channelNamesMap = {'AF7': ['Fp1', 'AF3', 'F3', 'F5', 'F7'],'AF8':['Fp2', 'AF4', 'F4', 'F6', 'F8'],
@@ -32,8 +36,13 @@ def channels():
     
     region = ['Left Frontalis', 'Right Frontalis', 'Left Temporalis', 'Right Temporalis']
 
+    """ Option 1: I am using the configuration file with hard coded technique!"""
+    channelNamesNoRepeat = {'AF7': ['Fp1', 'AF3', 'F3', 'F5', 'F7'],'AF8':['Fp2', 'AF4', 'F4', 'F6', 'F8'],
+                     'FT7': ['FC5', 'C5', 'T7'],'FT8': ['FC6', 'C6', 'T8'],
+                    'Fz': ['Fz','Cz']} 
+
    
-    return channelNamesMap, region
+    return channelNamesMap, region, channelNamesNoRepeat
 
 # We used Bio-semi 64 electrode layout system. Other can be given like 10-20 system 10-10 sytem as well.
 def channelLayout():
@@ -52,7 +61,7 @@ and cross validation techiques. Ref: A Student’s Guide to Randomization
 Statistics for Multichannel Event-Related Potentials Using Ragu Marie Habermann1, Dorothea Weusmann1, Maria Stein2 and Thomas Koenig1* 1 Translational Research Center, Department of Psychiatric Neurophysiology, University Hospital of Psychiatry Bern, University of Bern, Bern, Switzerland, 2 Department of Clinical Psychology and Psychotherapy, University of Bern, Bern, Switzerland. doi: 10.3389/fnins.2018.00355   
 """
 def numberOfCluster():
-    return 21
+    return 9
 
 """
 Parameter: used in microstate analysis in detecting the maxmimum average correlation for finding the optimal 
@@ -60,7 +69,7 @@ microstate model. Ref: A Tutorial on Data-Driven Methods for Statistically Asses
 Thomas Koenig • Maria Stein • Matthias Grieder •
 Mara Kottlow. Brain Topogr (2014) 27:72–83 DOI 10.1007/s10548-013-0310-1
 """    
-def repetitonsCount():
+def repetitionsCount():
     return 2
 
 

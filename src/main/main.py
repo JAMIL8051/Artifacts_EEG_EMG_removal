@@ -1,4 +1,5 @@
 import EegArtifactAnalyzer
+import MicrostateAnalyzer
 from tkinter import filedialog
 import tkinter as tk
 
@@ -28,9 +29,10 @@ def main():
     root = tk.Tk()
     root.withdraw()
     filepath  = filedialog.askopenfilename()
-    print(filepath)
+    #print(filepath)
+    print('Initializing the detection and removal process')
 
-    results = EegArtifactAnalyzer.detectAndRemoveEegArtifact(filepath)
+    results = EegArtifactAnalyzer.detectAndRemoveEegArtifact(filepath, trainDataPath)
 
     #visualizer.visualize(result)
     return None

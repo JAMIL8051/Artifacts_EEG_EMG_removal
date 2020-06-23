@@ -47,7 +47,7 @@ def finalBandPower(raw, N, fs, tmin = None, tmax= None, epoch_time = 2):
 			power_45_70Hz = (1/N**2)*sum(temp)
 			epoch_power_45_70Hz[i, epoch, :] = power_45_70Hz
 			
-	return epoch_power_45_70Hz, data*1e-06
+	return epoch_power_45_70Hz
 
 
 # Function to calculate the power of the EEG data epochs from the preprocessed Raw object from 
@@ -60,7 +60,8 @@ def bandPower(raw, channels):
 
 # Function for the detection of contaminated data
 def detectContaminatedData(raw, channelNames, threshold_val):
-	power, data = bandPower(raw, channelNames)
+	power = bandPower(raw, channelNames)
+	data = raw.get_data()
 	#Allocating memory for the channel and epoch indices array for the primary channels data			
 	contaminatedData = np.zeros((len(channelNames),100,1024),dtype='float')
 
@@ -78,7 +79,7 @@ def identifyArtifacts(raw):
 	input parameter: raw object only from MNE library Python
 	"""
 	# getting the channels map as dictionary from config file region as a list
-	channelNamesMap, region = Configuration.channels()
+	channelNamesMap, region, channelNamesNoRepeat = Configuration.channels()
 	channelNamesPrimary = []
 	ch_names_list = []
 	for key in channelNamesMap:
@@ -88,26 +89,39 @@ def identifyArtifacts(raw):
 		
 	ch_names_combined = sum(ch_names_list, [])
 
-	power, data = bandPower(raw, channelNamesPrimary)
+	power = bandPower(raw, channelNamesPrimary)
 	threshold = power.mean(axis = 1)
 	
 	artifactualData = {}
-	finalEmgData = np.zeros((len(channelNamesPrimary), len(ch_names_list[0]), 100, 1024), dtype = 'float')
-	
+	#finalEmgData = np.zeros((len(channelNamesPrimary), len(ch_names_list[0]), 100, 1024), dtype = 'float')
+	#-----------------
+	finalEmgData1 = {}
+	#------------------
 	for i in range(len(channelNamesPrimary)):
 		primaryChannelName = channelNamesPrimary[i]
 		for epoch in range(100):
 			if power[i, epoch]>threshold[i]:
-				contaminatedData = detectContaminatedData(raw, channelNamesMap[primaryChannelName], threshold[i])
-				finalEmgData[i,:,:,:] = contaminatedData
-				artifactualData[region[i]] = contaminatedData[contaminatedData != 0]
+				#--------------------------------------
+				finalEmgData1[channelNamesPrimary[i]] = detectContaminatedData(raw, channelNamesNoRepeat[primaryChannelName], 
+																   threshold[i])
+				#--------------------------------------
+				contaminatedData = detectContaminatedData(raw, channelNamesMap[primaryChannelName], threshold[i]) 
+				
+
+				# finalEmgData[i,:,:,:] = contaminatedData
+				
+				artifactualData[region[i]] = contaminatedData
 
 	
-	dataWithArtifactsDetected = finalEmgData
-	
-	
-	return dataWithArtifactsDetected, ch_names_combined, artifactualData 
-	
+	#dataWithArtifactsDetected = finalEmgData
+	#----------------------------------------------------
+	finalEmgData2 = []
+	for key in finalEmgData1:
+		finalEmgData2.append(finalEmgData1[key])
+	finalEmgData2 = np.row_stack(np.asarray(finalEmgData2))
+	#------------------------------------------------------
+	#return dataWithArtifactsDetected, ch_names_combined, artifactualData, finalEmgData2 
+	return artifactualData, finalEmgData2, ch_names_combined 
 
 
 
