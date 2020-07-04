@@ -1,6 +1,5 @@
 import Configuration
 import EegArtifactAnalyzer
-import PowerAnalysis
 import ModifiedKmeans
 import glob
 import mne
@@ -8,20 +7,6 @@ import numpy as np
 import math
 import random
 from scipy import signal
-
-
-
-def listToArray(subjectData):
-    n_ch = subjectData[0].shape[0]
-    n_t = subjectData[0].shape[1]
-    
-    subjectData1 = np.zeros((len(subjectData), n_ch, n_t),dtype ='float')
-    
-    for i in range(len(subjectData)):
-        subjectData1[i,:,:] =subjectData[i]
-    return subjectData1
-
-# This function loads the EEG files and do little preporcessing and store the data subject wise
 
 
 #Function to calculate the mean along the n_ch axis that along the rows: Courtesy Wenjun Jia
@@ -54,6 +39,7 @@ def fit_back(data, maps, distance= 10, n_std=3, polarity=False, instantaneous_ee
 
     return correlation 
 
+
 def calcMeanCorrelation(testData, maps):
     correlation = fit_back(testData, maps, distance= 10, n_std=3, polarity=False, 
                                instantaneous_eeg = True)
@@ -61,12 +47,12 @@ def calcMeanCorrelation(testData, maps):
     return meanCorrelation
 
 
-def meanCorrelation(subjectWiseData, shuffledSubjectWiseData, subjects):
+def meanCorrelation(subjectWiseData, subjects):
     randSubjects = random.sample(subjects,len(subjects))
-    shuffledSubjectWiseData.append(subjectWiseData[randSubjects])
+   
     
-    shuffleData = np.asarray(shuffledSubjectWiseData)
-    shuffleData = shuffleData.reshape(len(subjects),subjectWiseData.shape[2],subjectWiseData.shape[1])
+    shuffleData = subjectWiseData[randSubjects] 
+    
     
     # 50% training data
     trainData = shuffleData[:shuffleData.shape[0]//2]
@@ -77,51 +63,56 @@ def meanCorrelation(subjectWiseData, shuffledSubjectWiseData, subjects):
     meanTrainData = trainData.mean(axis = 0)
     # Just unit conversion: From volt to microvolt
     meanTrainData = meanTrainData/1e-6
-    
+    meanTrainData = meanTrainData - meanTrainData.mean(axis = 0, keepdims = True)
+    meanTrainData = meanTrainData[1:,:]
     meanTestData = testData.mean(axis = 0)
+    meanTestData = meanTestData/1e-6
     
     n_maps = 3
     
-    meanCorrelation = []
+    findMeanCorrelation = np.zeros((Configuration.numberOfCluster()-3),dtype = 'float')
 
     while n_maps<Configuration.numberOfCluster():    
-        maps, labels, gfp_peaks, gev, cv = ModifiedKmeans.kmeans(meanTrainData, n_maps, n_runs = 5, maxerr = 1e-6, 
+        maps, labels, gfp_peaks, gev, cv = ModifiedKmeans.kmeans(meanTrainData.T, n_maps, n_runs = 50, maxerr = 1e-6, 
                                                   maxiter = 1000, doplot = False)
           
-        meanCorrelation.append(calcMeanCorrelation(meanTestData, maps))
+        findMeanCorrelation[n_maps-3] = calcMeanCorrelation(meanTestData, maps)
         
         n_maps += 1
 
-    return meanCorrelation
+    return findMeanCorrelation
         
 
 def findOptimalCluster(subjectWiseData, subjectConditionWiseData):
-    subjects = list(range(subjectWiseData.shape[0])) 
-    meanCorrelations = np.zeros((Configuration.repetitionsCount(),Configuration.numberOfCluster()), dtype='float')
-    #repetitions= {}
-    # repetitions start here:
-
-     # For loop ends for 250 times with randomly shuffling 4 subjects data with 50% train data and 50% test
+    subjects = list(range(subjectWiseData.shape[0]))
+    
+    # We always start from the number of clusters = 3. So 3 is deducted to maintain the range. 
+    meanCorrelations = np.zeros((Configuration.repetitionsCount(),(Configuration.numberOfCluster()-3)), dtype='float')
+    
+    # For loop ends for 250 times with randomly shuffling 4 subjects data with 50% train data and 50% test
     # data
     for i in range(Configuration.repetitionsCount()):
         shuffledSubjectWiseData = []
 
-        meanCorrelation = meanCorrelation(subjectWiseData, shuffledSubjectWiseData, subjects) 
-        meanCorrelationCondtionWise = meanCorrelation(subjectConditionWiseData, shuffledSubjectWiseData, subjects) 
+        meanCorrelationSubjectWise = meanCorrelation(subjectWiseData, subjects) 
+        meanCorrelationCondtionWise = meanCorrelation(subjectConditionWiseData, subjects) 
 
-        resultantCorrelation = (np.asarray(meanCorrelation) + np.asarray(meanCorrelationCondtionWise))/2
+        resultantCorrelation = (meanCorrelationSubjectWise + meanCorrelationCondtionWise)/2
         meanCorrelations[i] = resultantCorrelation
         
                 
     avgMeanCorrelation = meanCorrelations.mean(axis = 0)
     
     optimalCluster = 0
+    # Here the index 0,1  represent cluster no. 3,4 s respectively and so on. As a result, 3 has been added again. 
     for i in range(len(avgMeanCorrelation)):
         if avgMeanCorrelation[i] == max(avgMeanCorrelation):
             optimalCluster = i + 3
 
+    print('Check done')
+
+    return optimalCluster
     
-   
 
     #meanCorrelation = []
 
@@ -152,7 +143,6 @@ def findOptimalCluster(subjectWiseData, subjectConditionWiseData):
     #        maxAvgMeanCorr = avgMeanCorrelation[key]
     #        optimalCluster = int(key)
 
-    print('Check done')
+    #repetitions= {}
+    # repetitions start here:
 
-    return subjectWiseData, subjectConditionWiseData, optimalCluster
-        

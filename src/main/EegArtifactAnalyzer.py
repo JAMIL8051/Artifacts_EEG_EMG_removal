@@ -1,11 +1,13 @@
 import EegPreprocessor as preprocessor
 import PowerAnalysis
 import Configuration
+import MicrostateAnalyzer
+import RandomizationStatistics
 import BackFit
 import numpy as np
 import mne
-import MicrostateAnalyzer
-import RandomizationStatistics
+import matplotlib.pyplot as plt
+
 
 
 # This script start from the function: "detectAndRemoveEegArtifact". This function detects the EMG artifacts due to 
@@ -24,14 +26,30 @@ Cleveland, Ohio 44106Email: cavusoglu@case.edu
 
 # Please start from the bottom to top reading approach. As in python sub-functions inside a big function needs to be on the top
 # of the big function
+# Function for plotting the optimal number of microstate maps obtained after microstate 
+# analysis
 
 
+
+        
+# Function to remove EMG artifacts using microstate analysis and randomization statistics
 def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPath, backfit=True, interpolate = False):
 
 	# First step: Find optimal number of microstate classes
 	# Doing the microstate analysis to generate the optimal number of microstate classes
 	optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
+	
+	# For visualization purpose
+	# optimalMaps.T.tofile('optimalMapsData.dat')
+	
+	info = raw.pick(picks = Configuration.channelList()).info
+	
 
+	print('Optional number of microstate classes determined: ',optimalNumberOfCluster)
+	
+	
+	
+	
 	# Conduct randomized statistics with help of quantifiers of microstate classes or maps to generate the 
 	# significantly different maps with labels for backfit and significantly not different ones for interpolation
 	raw_non_conta_data, sigDiffMapLabel, sigNotDiffMapLabel = RandomizationStatistics.randomizationStat(raw, 
@@ -111,7 +129,8 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit=True, interpolat
 	# Function to remove the EMG artifacts
 	backFitResult, backFitResultFullData, interploateResult, interploateResultFullData = removeArtifacts(raw, 
 																										finalEmgData2Raw,
-																										artifactualData, 
+																										artifactualData,
+																										trainDataPath,
 																										backfit, 
 																										interpolate)
 	# End of data analysis

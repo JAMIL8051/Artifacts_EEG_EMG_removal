@@ -1,12 +1,11 @@
+import Configuration
 import EegArtifactAnalyzer
-import MicrostateAnalyzer
 from tkinter import filedialog
 import tkinter as tk
 
 
-
 """
-@Author: Jamil Reza Chwodhury
+@Author: Jamil Reza Chowdhury
 Department of Electrical and Computer Engineering 
 Concordia University, Montreal, QC Canada
 """
@@ -31,7 +30,7 @@ def main():
     filepath  = filedialog.askopenfilename()
     #print(filepath)
     print('Initializing the detection and removal process')
-
+    trainDataPath = Configuration.defaultTrainDataFolder()
     results = EegArtifactAnalyzer.detectAndRemoveEegArtifact(filepath, trainDataPath)
 
     #visualizer.visualize(result)
