@@ -9,7 +9,6 @@ import mne
 import matplotlib.pyplot as plt
 
 
-
 # This script start from the function: "detectAndRemoveEegArtifact". This function detects the EMG artifacts due to 
 # frontalis and temporalis scalp muscle using power analysis in 45-70 Hz technique. For details follow:
 
@@ -24,61 +23,7 @@ LSCDVA Medical Center, Cleveland Ohio 44106 Email: jjd17@case.edu
 Cleveland, Ohio 44106Email: cavusoglu@case.edu
 """ 
 
-# Please start from the bottom to top reading approach. As in python sub-functions inside a big function needs to be on the top
-# of the big function
-# Function for plotting the optimal number of microstate maps obtained after microstate 
-# analysis
-
-
-
-        
-# Function to remove EMG artifacts using microstate analysis and randomization statistics
-def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPath, backfit=True, interpolate = False):
-
-	# First step: Find optimal number of microstate classes
-	# Doing the microstate analysis to generate the optimal number of microstate classes
-	optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
-	
-	# For visualization purpose
-	# optimalMaps.T.tofile('optimalMapsData.dat')
-	
-	info = raw.pick(picks = Configuration.channelList()).info
-	
-
-	print('Optional number of microstate classes determined: ',optimalNumberOfCluster)
-	
-	
-	
-	
-	# Conduct randomized statistics with help of quantifiers of microstate classes or maps to generate the 
-	# significantly different maps with labels for backfit and significantly not different ones for interpolation
-	raw_non_conta_data, sigDiffMapLabel, sigNotDiffMapLabel = RandomizationStatistics.randomizationStat(raw, 
-																					rawWithArtifactsDetected, 
-																					artifactualData, 
-																					optimalNumberOfCluster)
-
-	# Main criteria to preserve the data epochs or microstates
-	individualSubjectdata = raw.pick(picks = Configuration.channelList()).get_data()
-
-	if backfit:
-		backFitResult = BackFit.backFit(raw_non_conta_data, optimalMaps, sigDiffMapLabel)
-		backFitResultFullData = BackFit.backFit(individualSubjectdata, optimalMaps, sigDiffMapLabel)
-		
-		# Can be done in another way: Call Modified K means/findEffect function and take maps variable condition wise and 
-		# fit the maps using the sigDiffMapLabel as obtained from randomization 
-		
-
-	# Optional for now!!
-	if interpolate:
-		interploateResult = interpolate(raw_non_conta_data, optimalMaps, sigNotDiffMapLabel)
-		interploateResultFullData = interpolate(individualSubjectdata, sigNotDiffMapLabel)
-		
-		# Can be done in another way: Same strategy as used in backfit of data.
-	
-	return backFitResult, backFitResultFullData, interploateResult, interploateResultFullData
-
 #Function to format the data for microstate analysis
-
 def formatForMicrostate(raw, dataWithArtifactsDetected, ch_names_combined):
 	dataWithArtifactsDetected = dataWithArtifactsDetected.reshape((len(ch_names_combined), 100, 1024))
 	
@@ -108,6 +53,53 @@ def detectArtifacts(filepath):
 	artifactualData, finalEmgData1, ch_names_combined = PowerAnalysis.identifyArtifacts(raw)
 	
 	return raw, ch_names_combined, artifactualData, finalEmgData1
+
+
+# Please start from the bottom to top reading approach. As in python sub-functions inside a big function needs to be on the top
+# of the big function
+# Function for plotting the optimal number of microstate maps obtained after microstate 
+# analysis
+
+        
+# Function to remove EMG artifacts using microstate analysis and randomization statistics
+def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPath, backfit=True, interpolate = False):
+
+	# First step: Find optimal number of microstate classes
+	# Doing the microstate analysis to generate the optimal number of microstate classes
+	# optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
+	
+	
+	
+	
+	
+	# Conduct randomized statistics with help of quantifiers of microstate classes or maps to generate the 
+	# significantly different maps with labels for backfit and significantly not different ones for interpolation
+	raw_non_conta_data, labels, parameters = RandomizationStatistics.randomizationStat(raw, 
+																					rawWithArtifactsDetected, 
+																					artifactualData, 
+																					optimalNumberOfCluster = 10)
+
+	# Main criteria to preserve the data epochs or microstates
+	#individualSubjectdata = raw.pick(picks = Configuration.channelList()).get_data()
+
+	if backfit:
+		backFitResult_0 = BackFit.backFit(raw_non_conta_data, optimalMaps, labels, parameters[0])
+		backFitResult_1 = BackFit.backFit(raw_non_conta_data, optimalMaps, labels, parameters[1])
+		backFitResult_2 = BackFit.backFit(raw_non_conta_data, optimalMaps, labels, parameters[2])
+		backFitResultFullData = BackFit.backFit(individualSubjectdata, optimalMaps, sigDiffMapLabel)
+		
+		# Can be done in another way: Call Modified K means/findEffect function and take maps variable condition wise and 
+		# fit the maps using the sigDiffMapLabel as obtained from randomization 
+		
+
+	# Optional for now!!
+	if interpolate:
+		interploateResult = interpolate(raw_non_conta_data, optimalMaps, sigNotDiffMapLabel)
+		interploateResultFullData = interpolate(individualSubjectdata, sigNotDiffMapLabel)
+		
+		# Can be done in another way: Same strategy as used in backfit of data.
+	
+	return backFitResult, backFitResultFullData, interploateResult, interploateResultFullData
 
 
 #Function to detect EMG contaminated EEG segments after standard preprocessing of the data and 

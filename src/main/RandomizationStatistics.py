@@ -13,8 +13,26 @@ def shuffle_data(data, n_condition):
     return data
 
 
+# Helper function! will move to utils in future!!!
+def effect(condition_0, condition_1, parameter):
+    val_0 = []
+
+    for key in condition_0[parameter]:
+        val_0.append(condition_0[parameter][key])
+
+    val_1 = []
+    for key in condition_1[parameter]:
+        val_1.append(condition_1[parameter][key])
+
+    val_0, val_1 = np.asarray(val_0), np.asarray(val_1)
+    # Condition_1 vs Condition_0:
+    resultantEffect = val_1 - val_0
+    
+    return resultantEffect
 # Function to find the effect using the data and microstate analysis by calculating the microstate
 # map quantifiers
+
+
 def findEffect(conta_data, non_conta_data, optimalNumberOfCluster):
 
     # BDF data so a simple conversion of volt to microvolt
@@ -35,39 +53,69 @@ def findEffect(conta_data, non_conta_data, optimalNumberOfCluster):
     condition_0 = MicrostateQuantifiers.quantifyMicrostates(conta_maps, conta_labels)
     condition_1 = MicrostateQuantifiers.quantifyMicrostates(non_conta_maps, non_conta_labels)
     
+    # The parameter variable comes from quantuify microstate function. The number of parameters can be increased or decreased
+    # or modified in the MicrostateQuantifiers script.
+    parameters =[]
+    for key in condition_0:
+        if key != 'gfp' and key != 'indices BackTraceData of Microstate classes':
+            parameters.append(key)
+    #parameters = parameters[1:4]
+    effectResults = {}
+    for i in range(len(parameters)):
+        result = effect(condition_0, condition_1, parameters[i])
+        effectResults[parameters[i]+'-effect'] = result
+    return effectResults, parameters
     
-    # Choosing only one qunatifier for simplification
-    val_0 = []
-
-    for key in condition_0['Count of time points']:
-        val_0.append(condition_0['Count of time points'][key])
-
-    val_1 = []
-    for key in condition_1['Count of time points']:
-        val_1.append(condition_1['Count of time points'][key])
-
-    val_0, val_1 = np.asarray(val_0), np.asarray(val_1) 
-    effect = val_1-val_0
-
     
-    return effect
-
-
 #Small twick to find the observed effect
 def findObservedEffect(raw, rawWithArtifactsDetected, optimalNumberOfCluster):
     conta_data, times = rawWithArtifactsDetected.get_data(return_times = True)
-    conta_data = conta_data.T
-    non_conta_data = raw.pick(picks = rawWithArtifactsDetected.ch_names).get_data().T
-    # In case the raw object fails to work! Use the line below
-    #non_conta_data = raw.pick(picks = Configuration.channelList()).get_data().T
+    conta_data = conta_data
+
+    #In case the raw object fails to work! Use the line below
+    non_conta_data = raw.pick(picks = Configuration.channelList()).get_data()
     time_samples = len(times)-(len(times) % 1024)
     # +1 as the first sample beling very close to zero is ignored. This is dataset specific. User can change anytime
     non_conta_data = non_conta_data[:,1:time_samples+1]
+    conta_data = conta_data[:,1:time_samples+1] 
+    observedEffectResults = findEffect(conta_data.T, non_conta_data.T, optimalNumberOfCluster)
+    return observedEffectResults
 
-    observedEffect = findEffect(conta_data, non_conta_data, optimalNumberOfCluster)
+  
+# We randomly assign a condition on each epochs for single subject analysis: 
+# Future target on subject basis data: Randomly assign condition on to subject data: 
+# See:
+"""A Tutorial on Data-Driven Methods for Statistically Assessing ERP Topographies by Thomas Koenig,
+    Maria Stein, Matthias Grieder, Mara Kottlow for more details.
+"""
+
+# Final implementation of randomization statistics to get the map labels
+
+def findRandEffect(data, n_channels, n_condition, n_times, no_epochs, optimalNumberOfCluster):
+    runs = Configuration.numberOfRandomRuns()
+    #n_parameters = Configuration.numberOfMicrostateQuantifiers()
+    # Here 3 is for the number of parameters quantifying the microstate maps. We used 3 parameters. So 3 is given.
+    randEffectSize = np.zeros((runs, 3, optimalNumberOfCluster),dtype = 'float')
     
+    
+    while n_times<Configuration.numberOfRandomRuns():
+        print('randomization run no: ', n_times)
+        rand_data = shuffle_data(data, n_condition)
+        rand_data = rand_data.reshape((n_condition, no_epochs, n_channels, 1024))
+    
+        rand_raw_non_conta_data = rand_data[0].reshape((no_epochs*1024, n_channels))
+        rand_raw_conta_data = rand_data[1].reshape((no_epochs*1024, n_channels))
+    
+        # FUNCT1: Akta function hobe ja maps label generate kore quanitifier call korbe then 
+        # duita condition er jonno quantifier diff ber kore return korbe hash map or list e
+        randEffect, parameters = findEffect(rand_raw_conta_data, rand_raw_non_conta_data, optimalNumberOfCluster)
+        randEffectSize[n_times, 0] = randEffect[parameters[0]+'-effect']
+        randEffectSize[n_times, 1] = randEffect[parameters[1]+'-effect']
+        randEffectSize[n_times, 2] = randEffect[parameters[2]+'-effect']
+        
+        n_times += 1
 
-    return observedEffect
+    return randEffectSize, parameters
 
 
 # Finally finds the label by calculating the probability using no. of random shffles chosen
@@ -85,11 +133,13 @@ def findLabel(observedEffect, optimalNumberOfCluster, randEffectSize):
     
     microstateClassProbability = microstateClass/randEffectSize.shape[0]
     
+    print('The probabilities of the 10 microstate classes:\n', microstateClassProbability)
+    
     sigDiffMapLabel = []
     sigNotDiffMapLabel = []
 
     for i in range(len(microstateClassProbability)):
-        if microstateClassProbability[i] <=0.05:
+        if microstateClassProbability[i] <= 0.05:
             sigDiffMapLabel.append(i)
         else:
             sigNotDiffMapLabel.append(i)
@@ -97,21 +147,13 @@ def findLabel(observedEffect, optimalNumberOfCluster, randEffectSize):
     return sigDiffMapLabel, sigNotDiffMapLabel 
 
 
-# We randomly assign a condition on each epochs for single subject analysis: 
-# Future target on subject basis data: Randomly assign condition on to subject data: 
-# See:
-"""A Tutorial on Data-Driven Methods for Statistically Assessing ERP Topographies by Thomas Koenig,
-    Maria Stein, Matthias Grieder, Mara Kottlow for more details.
-"""
-
-# Final implementation of randomization statistics to get the map labels
-
 def randomizationStat(raw, rawWithArtifactsDetected, artifactualData, optimalNumberOfCluster):
     #FUNCT1:Call hobe observed effect ber korar jonno: 
     #2 times: 1 for opt_cluster1 1 for optimalNumberOfCluster 
     #chinta korbo: maps plus label duitai return koriye dictionary te store korbe:
     #ei gula hobe dictionary: sigDiffMapLabel, sigNotDiffMapLabel
-    observedEffect = findObservedEffect(raw, rawWithArtifactsDetected, optimalNumberOfCluster)
+    print('First run for finding the Observed Effect:')
+    observedEffectResults = findObservedEffect(raw, rawWithArtifactsDetected, optimalNumberOfCluster)
     
 
     raw_conta_data, times = rawWithArtifactsDetected.get_data(return_times = True)
@@ -138,30 +180,38 @@ def randomizationStat(raw, rawWithArtifactsDetected, artifactualData, optimalNum
     condition = Configuration.conditionForStatAnalysis()
     n_condition = len(condition)
     data = np.concatenate((raw_non_conta_data, raw_conta_data), axis = 1)
-    
     n_times = 0
-
-    randEffectSize = np.zeros((1000, optimalNumberOfCluster),dtype = 'float')
-
-    while n_times<1000:
     
-        rand_data = shuffle_data(data, n_condition)
-        rand_data = rand_data.reshape((n_condition, no_epochs, n_channels, 1024))
-
-        rand_raw_non_conta_data = rand_data[0].reshape((no_epochs*1024, n_channels))
-        rand_raw_conta_data = rand_data[1].reshape((no_epochs*1024, n_channels))
-
-        # FUNCT1: Akta function hobe ja maps label generate kore quanitifier call korbe then 
-        # duita condition er jonno quantifier diff ber kore return korbe hash map or list e
-        randEffect = findEffect(rand_raw_conta_data, rand_raw_non_conta_data, optimalNumberOfCluster)
-        randEffectSize[n_times] = randEffect
-        
-        n_times += 1
+    randEffectSize, parameters = findRandEffect(data, n_channels, n_condition, n_times, no_epochs, optimalNumberOfCluster)
 
     # Function 2: While loop theke ber hobo then ei kaj korbo. Null hypothesis er porbability 
     # calculate korbe for each micrstate class and will return: Significantly different map+label and 
     # Significantly not different map+label
-    
-    sigDiffMapLabel, sigNotDiffMapLabel = findLabel(observedEffect, optimalNumberOfCluster, randEffectSize)
+    observedCountOfTimePointsEffect = observedEffectResults[parameters[0]+'-effect']
+    observedOnsetOfMicrostateEffect = observedEffectResults[parameters[1]+'-effect']
+    observedOffsetOfMicrostateEffect = observedEffectResults[parameters[2]+'-effect']
 
-    return sigDiffMapLabel, sigNotDiffMapLabel, raw_non_conta_data
+    countOfTimePointsRandEffectSize = randEffectSize[:,0,:]
+    onsetOfMicrostateRandEffectSize = randEffectSize[:,1,:]
+    offsetOfMicrostateRandEffectSize = randEffectSize[:,2,:]
+
+    print('For the parameter: ', parameters[0])
+    sigDiffMapLabel_0, sigNotDiffMapLabel_0 = findLabel(observedCountOfTimePointsEffect, optimalNumberOfCluster, countOfTimePointsRandEffectSize)
+    print('For the parameter: ', parameters[1])
+    sigDiffMapLabel_1, sigNotDiffMapLabel_1 = findLabel(observedOnsetOfMicrostateEffect, optimalNumberOfCluster, onsetOfMicrostateRandEffectSize)
+    print('For the parameter: ', parameters[2])
+    sigDiffMapLabel_2, sigNotDiffMapLabel_2 = findLabel(observedOffsetOfMicrostateEffect, optimalNumberOfCluster, offsetOfMicrostateRandEffectSize)
+
+    labels={}
+    labels[parameters[0]+'significant'] = sigDiffMapLabel_0  
+    labels[parameters[0]+'notSignificant'] = sigNotDiffMapLabel_0  
+    labels[parameters[1]+'significant'] = sigDiffMapLabel_1
+    labels[parameters[1]+'notSignificant'] = sigNotDiffMapLabel_1
+    labels[parameters[2]+'significant'] = sigDiffMapLabel_2
+    labels[parameters[2]+'notSignificant'] = sigNotDiffMapLabel_2
+    
+
+    return raw_non_conta_data, labels, parameters 
+
+
+

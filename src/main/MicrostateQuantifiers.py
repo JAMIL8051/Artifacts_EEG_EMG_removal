@@ -2,9 +2,11 @@ import numpy as np
 
 
 #Quantifiers of microstate maps from two groups/conditions
+
 def quantifyMicrostates(maps, labels):
     # Count of total time points when each microstate class occurs
     quantifiersMicrostateClass = {}
+    # 3 Parameters 
     countOfTimePoints = {}
     microstateOnset = {}
     microstateOffset = {}

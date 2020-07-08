@@ -48,8 +48,8 @@ def fit_back(data, maps, distance= 10, n_std=3, polarity=False, instantaneous_ee
 
 
 # Final BackFit function
-def backFit(data, maps, sigDiffMapLabel):
-    
+def backFit(data, maps, labels,parameter):
+    sigDiffMapLabel = labels[parameter+'significant']
     maps = maps[sigDiffMapLabel]
     label = fit_back(data, maps, distance= 10, n_std=3, polarity=False, instantaneous_eeg =False)
 

@@ -70,7 +70,7 @@ Thomas Koenig • Maria Stein • Matthias Grieder •
 Mara Kottlow. Brain Topogr (2014) 27:72–83 DOI 10.1007/s10548-013-0310-1
 """    
 def repetitionsCount():
-    return 9
+    return 300
 
 def channelLocationFile():
     return "C:/projects/eeg_microstates/src/channel_location_files/ChannelLocationsForOptimalCluster.xyz"
@@ -89,5 +89,13 @@ def conditionForStatAnalysis():
 def groupForStatAnalysis():
     group =['region','channel']
     return group
+
+# Number of randomization runs to generate the null hypothesis distribution.
+def numberOfRandomRuns():
+    return 1000
+
+# This is related to the MicrostateQuantifiers script. Need to develop later!!!!
+def numberOfMicrostateQuantifiers():
+    return 3
 
 
