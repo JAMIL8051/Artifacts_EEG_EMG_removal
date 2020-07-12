@@ -113,15 +113,15 @@ def analyzeMicrostate(trainDataPath):
     #    trainDataPath = Configuration.defaultTrainDataFolder()
     
     subjectWiseData, subjectConditionWiseData = loadData(trainDataPath)
-    optimalCluster = Cluster.findOptimalCluster(subjectWiseData, subjectConditionWiseData)
-
+    #optimalCluster = Cluster.findOptimalCluster(subjectWiseData, subjectConditionWiseData)
+    optimalCluster = 10
     data = subjectWiseData.mean(axis = 0).T
     # Zoom in of the data in to micro volt from volts
     data = data/1e-06
     # Removing the first time sample from all channels. The first sample is very close to zero. We can ignore that.
     data = data[1:,:]
 
-    optimalMaps, labels, gfp_peaks, gev, cv = ModifiedKmeans.kmeans(data, optimalCluster, n_runs = 50, maxerr = 1e-6, 
+    optimalMaps, labels, gfp_peaks, gev, cv = ModifiedKmeans.kmeans(data, n_maps=10, n_runs = 50, maxerr = 1e-6, 
                                                       maxiter = 1000, doplot = False)
 
     savetxt('optimalMaps.csv', optimalMaps, delimiter=',')

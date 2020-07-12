@@ -19,8 +19,7 @@ def spatial_correlation(averaged_v1, averaged_v2, std_v1, std_v2, n_ch):
 def fit_back(data, maps, distance= 10, n_std=3, polarity=False, instantaneous_eeg = False):
 
     if instantaneous_eeg:
-        correlation = spatial_correlation(data, zero_mean(maps, 1).T, data.std(axis=1),
-                                                         maps.std(axis=1), data.shape[0])
+        correlation = spatial_correlation(data, zero_mean(maps, 1).T, data.std(axis=1), maps.std(axis=1), data.shape[0])
         correlation = correlation if polarity else abs(correlation)
         label = np.argmax(correlation,axis=1)
         return label
@@ -48,13 +47,16 @@ def fit_back(data, maps, distance= 10, n_std=3, polarity=False, instantaneous_ee
 
 
 # Final BackFit function
-def backFit(data, maps, labels,parameter):
-    sigDiffMapLabel = labels[parameter+'significant']
-    maps = maps[sigDiffMapLabel]
-    label = fit_back(data, maps, distance= 10, n_std=3, polarity=False, instantaneous_eeg =False)
+def backFit(data, maps, labels,parameter): 
+    intantaneousEEGLabel = fit_back(data, maps, distance= 10, n_std=3, polarity= False, instantaneous_eeg = True)
+    peakGfpLabel = fit_back(data, maps, distance= 10, n_std=3, polarity= False, instantaneous_eeg = False)
+
+    return intantaneousEEGLabel, peakGfpLabel
 
 
-    return label
+
+
+    
 
 
 

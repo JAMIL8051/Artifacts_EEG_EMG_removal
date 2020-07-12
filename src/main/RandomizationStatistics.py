@@ -33,7 +33,7 @@ def effect(condition_0, condition_1, parameter):
 # map quantifiers
 
 
-def findEffect(conta_data, non_conta_data, optimalNumberOfCluster):
+def findEffect(conta_data, non_conta_data, optimalNumberOfCluster, return_maps = False):
 
     # BDF data so a simple conversion of volt to microvolt
     conta_data = conta_data/1e-6 
@@ -59,12 +59,14 @@ def findEffect(conta_data, non_conta_data, optimalNumberOfCluster):
     for key in condition_0:
         if key != 'gfp' and key != 'indices BackTraceData of Microstate classes':
             parameters.append(key)
-    #parameters = parameters[1:4]
+
     effectResults = {}
     for i in range(len(parameters)):
         result = effect(condition_0, condition_1, parameters[i])
         effectResults[parameters[i]+'-effect'] = result
-    return effectResults, parameters
+    if return_maps:
+        return effectResults, parameters, conta_maps, non_conta_maps
+    return effectResults, parameters 
     
     
 #Small twick to find the observed effect
@@ -78,8 +80,10 @@ def findObservedEffect(raw, rawWithArtifactsDetected, optimalNumberOfCluster):
     # +1 as the first sample beling very close to zero is ignored. This is dataset specific. User can change anytime
     non_conta_data = non_conta_data[:,1:time_samples+1]
     conta_data = conta_data[:,1:time_samples+1] 
-    observedEffectResults = findEffect(conta_data.T, non_conta_data.T, optimalNumberOfCluster)
-    return observedEffectResults
+    observedEffectResults, parameters, conta_maps, non_conta_maps = findEffect(conta_data.T, non_conta_data.T, 
+                                                                               optimalNumberOfCluster, 
+                                                                               return_maps = True)
+    return observedEffectResults, parameters, conta_maps, non_conta_maps 
 
   
 # We randomly assign a condition on each epochs for single subject analysis: 
@@ -153,15 +157,14 @@ def randomizationStat(raw, rawWithArtifactsDetected, artifactualData, optimalNum
     #chinta korbo: maps plus label duitai return koriye dictionary te store korbe:
     #ei gula hobe dictionary: sigDiffMapLabel, sigNotDiffMapLabel
     print('First run for finding the Observed Effect:')
-    observedEffectResults = findObservedEffect(raw, rawWithArtifactsDetected, optimalNumberOfCluster)
+    observedEffectResults, parameters, conta_maps, non_conta_maps = findObservedEffect(raw, 
+                                                                                       rawWithArtifactsDetected, 
+                                                                                       optimalNumberOfCluster)
     
-
     raw_conta_data, times = rawWithArtifactsDetected.get_data(return_times = True)
 
     channels = Configuration.channelList()
     n_channels = len(channels)
-
-    #times = 12185
 
     no_epochs = len(times)//1024
 
@@ -203,15 +206,15 @@ def randomizationStat(raw, rawWithArtifactsDetected, artifactualData, optimalNum
     sigDiffMapLabel_2, sigNotDiffMapLabel_2 = findLabel(observedOffsetOfMicrostateEffect, optimalNumberOfCluster, offsetOfMicrostateRandEffectSize)
 
     labels={}
-    labels[parameters[0]+'significant'] = sigDiffMapLabel_0  
+    labels[parameters[0]+'Significant'] = sigDiffMapLabel_0  
     labels[parameters[0]+'notSignificant'] = sigNotDiffMapLabel_0  
-    labels[parameters[1]+'significant'] = sigDiffMapLabel_1
+    labels[parameters[1]+'Significant'] = sigDiffMapLabel_1
     labels[parameters[1]+'notSignificant'] = sigNotDiffMapLabel_1
-    labels[parameters[2]+'significant'] = sigDiffMapLabel_2
+    labels[parameters[2]+'Significant'] = sigDiffMapLabel_2
     labels[parameters[2]+'notSignificant'] = sigNotDiffMapLabel_2
     
 
-    return raw_non_conta_data, labels, parameters 
+    return raw_non_conta_data, labels, parameters, conta_maps, non_conta_maps 
 
 
 

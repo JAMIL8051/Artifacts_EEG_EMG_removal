@@ -32,7 +32,8 @@ def main():
     filepath = 'C:/Users/J_CHOWD/Desktop/EEG_microstate_analysis_papers/TestDataN-BackLucas/2019-05-03_001.bdf'
     print('Initializing the detection and removal process')
     trainDataPath = Configuration.defaultTrainDataFolder()
-    results = EegArtifactAnalyzer.detectAndRemoveEegArtifact(filepath, trainDataPath)
+    results = EegArtifactAnalyzer.detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, 
+                                                             interpolate= True)
 
     #visualizer.visualize(result)
     return None

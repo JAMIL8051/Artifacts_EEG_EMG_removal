@@ -18,14 +18,13 @@ FT7 channel is mostly contaminated by left temporalis brain muscle.
 FT8 channel is mostly contaminated by right temporalis brain muscle. 
 
 The key Fz is the central channel from all the 4 regions(see 'Biosemi64' cap electrode layout system).
-This has two channels Fz and Cz. Fz can be used for the calculating the detection threshold in the power analysis step. 
-Cz is the reference channel by default.
+This has two channels Fz and Cz. Fz can be used for the calculating the detection threshold in the power analysis 
+step. Cz is the reference channel by default.
 
-The region variable shows the names of the regions in the brain which are highly prone muscle artifacts in EEG signals
-due to frontalis and temporalis scalp muscle 
+The region variable shows the names of the regions in the brain which are highly prone muscle artifacts in EEG 
+signals due to frontalis and temporalis scalp muscle 
 """
 def defaultTrainDataFolder():
-
     return  "C:/Users/J_CHOWD/Desktop/EEG_microstate_analysis_papers/TestDataN-BackLucas/*.bdf"
 
 
@@ -97,5 +96,8 @@ def numberOfRandomRuns():
 # This is related to the MicrostateQuantifiers script. Need to develop later!!!!
 def numberOfMicrostateQuantifiers():
     return 3
+
+def descibeInterpolate():
+    return 'Customized dataset for the interpolation part of the algorithm'
 
 
