@@ -1,4 +1,4 @@
-# Artifacts analysis and removal from Electroencephalographic (EEG) recordings using EEG microstates and randomization statisitcs.
+# EMG Artifacts analysis and removal from Electroencephalographic (EEG) recordings using EEG microstates and randomization statisitcs.
 
 Basic steps:
 1) Preprocessing
