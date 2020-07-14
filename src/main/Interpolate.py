@@ -3,6 +3,7 @@ import numpy as np
 import BackFit
 import Configuration
 
+
 """
 This is the interpolation script. This script starts at first with backfit operation.
 Input parameters: raw = raw object having the individual subject data see MNE documentation for more details
@@ -31,26 +32,43 @@ mentioned in the previous step by using the "Significantly Different map labels"
 the EMG artifacts removed raw data object for further validation and comparison.
 
 """
+def excludeZeros(data):
+    data = data[data!=0]
+    n_times_points = len(data)-len(data)% data.shape[0]
+    time_points_channel = len(data)//data.shape[0]
+    excludeZeroData = data[0:n_times_points].reshape(data.shape[0],time_points_channel)
 
-def interpolate(raw, conta_maps, labels):
-    data, times = raw.pick(picks = Configuration.channelList()).get_data(return_times =True)
-    instantaneousFittedLabels, peakGfpFittedLabels = Backfit.backfit(data.T, conta_maps)
-        
-    notSigDiffMapLabels = []
-    interpolateString = 'notSignificant'
-    for key in labels:
-        if interpolateString in key:
-            notSigDiffMapLabels.append(labels[key])
-    notSigDiffMapLabels = list(set(sum(notSigDiffMapLabels, [])))
+    return excludeZeroData
 
+
+
+def interpolate(interpolateData, conta_maps, interpolateLabel):
+    
+    interpolateData = excludeZeros(interpolateData) 
+    
+    instantaneousFittedLabels, peakGfpFittedLabels = BackFit.backFit(interpolateData.T, conta_maps)
+    
     # Extraction of data fitted with conta_maps using the NotSigDiffMapLabels
-    interpolateData = np.zeros((data.shape[0]),dtype='float')
+    
+    artifactualData = np.zeros((interpolateData.shape[0], interpolateData.shape[1]),dtype='float')
+    errorData = np.zeros((interpolateData.shape[0], interpolateData.shape[1]),dtype='float')
+ 
 
-    for i in range(len(times)):
-        for j in range(len(notSigDiffMapLabels)):
-            if (instantaneousFittedLabels[i] == notSigDiffMapLabels[j]) or (peakGfpFittedLabels[i] == notSigDiffMapLabels[j]):
-                n_times = times[i]
-                interpolateData[:] = data[:,n_times]
+    for i in range(interpolateData.shape[1]):
+        for j in range(len(interpolateLabel)):
+            if (instantaneousFittedLabels[i] == interpolateLabel[j]) or (peakGfpFittedLabels[i] == interpolateLabel[j]):
+                n_times = i
+                artifactualData[:,i] = data[:,n_times]
+            else:
+                errorData[:,i] = data[:,n_times]
+     
+    artifactualData = excludeZeros(artifactualData) 
+    errorData = excludeZeros(errorData)
+
+
+    
+
+
 
     info = mne.create_info(ch_names = Configuration.channelList(), sfreq = raw.info['sfreq'], 
 						ch_types= ['eeg']*data.shape[0], montage= Configuration.channelLayout())
@@ -58,9 +76,12 @@ def interpolate(raw, conta_maps, labels):
     # Adding some more information
     info['description'] = Configuration.descibeInterpolate() 
     info['bads'] = Configuration.channelList() # Taking all the channels
+    
+    
     interpolateRaw = mne.io.RawArray(interpolateData, info)
     interpolateRaw = interpolateRaw.interpolate_bads(reset_bads = False, mode='accurate',origin = (0.0,0.0,0.04))
-    return interpolateRaw
+
+    return interpolateRaw, errorData
 
 
 

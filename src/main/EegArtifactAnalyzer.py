@@ -5,12 +5,13 @@ import MicrostateAnalyzer
 import ModifiedKmeans
 import RandomizationStatistics
 import BackFit
+import Interpolate
 import numpy as np
 import mne
 from mne.viz import set_3d_title, set_3d_view
 import matplotlib.pyplot as plt
 
-
+ 
 # This script start from the function: "detectAndRemoveEegArtifact". This function detects the EMG artifacts due to 
 # frontalis and temporalis scalp muscle using power analysis in 45-70 Hz technique. For details follow:
 
@@ -61,15 +62,35 @@ def detectArtifacts(filepath):
 # of the big function
 # Function for plotting the optimal number of microstate maps obtained after microstate analysis        
 # Function to remove EMG artifacts using microstate analysis and randomization statistics
+def separateLabels(labels):
+    SigDiffMapLabel = []
+    SigNotDiffMapLabel = []
+    string = 'notSignificant'
+
+    for key in labels:
+        if string not in key:
+            SigDiffMapLabel.append(labels[key])
+        else:
+            SigNotDiffMapLabel.append(labels[key])
+    
+    SigDiffMapLabel = set(list(set(sum(SigDiffMapLabel, []))))
+    SigNotDiffMapLabel = set(list(set(sum(SigNotDiffMapLabel, []))))
+
+    interpolateLabel = SigNotDiffMapLabel - SigDiffMapLabel
+    interpolateLabel = list(interpolateLabel)
+
+
+    return SigDiffMapLabel, interpolateLabel
+
+
+
+
 
 def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPath, backfit=True, interpolate = True):
 
 	# First step: Find optimal number of microstate classes
 	# Doing the microstate analysis to generate the optimal number of microstate classes
-	#optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
-	
-	
-	
+	# optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
 	
 	
 	# Conduct randomized statistics with help of quantifiers of microstate classes or maps to generate the 
@@ -79,62 +100,67 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 																					artifactualData, 
 																					optimalNumberOfCluster = 10)
 
+	# Separting the labels parameter into two other ones: sigDiffmaplabel and interpolateLabel for the 
+	# backfit and interpolation part.
+	SigDiffMapLabel, interpolateLabel = separateLabels(labels)
+
+
+
+
 	
 	# Here the backfit process is done in two ways. First, the whole individual raw single-subject data is taken
-	# from the raw object. This data is 16 by 12800 ndarray. 16 channels represents the channelList in the Configuration
-	# file. Second, the conta_maps, non_conta_maps parameters are fitted to the instantaneous data and 
-	# on the gfp peaks of the data. For three quantifiers the results are obtained.  
+	# from the raw object. This data is 16 by 128000 ndarray. 16 channels represents the channelList in the 
+	# Configuration file. Second, the conta_maps, non_conta_maps parameters are fitted to the instantaneous data 
+	# and on the gfp peaks of the data. For three micrsotate-quantifiers the laebls are computed and the final 
+	# results are obtained.
+	  
 	if backfit:
 		data = raw.pick(picks = Configuration.channelList()).get_data()
-		
-		
-		#conta_data, times = rawWithArtifactsDetected.get_data(return_times = True)
-		#time_samples = len(times) - (len(times) % 1024)
-		#non_conta_data = data[:,1:time_samples+1]
-		#non_conta_data = non_conta_data/1e-06
-		#optimalMaps, mapLabels, gfp_peaks, gev, cv = ModifiedKmeans.kmeans(non_conta_data.T, n_maps = 10, n_runs = 10, maxerr = 1e-06, maxiter = 1000, doplot=False) 
-		
+		data = data[:,1:]# Removing the first time-sample of all the channels as it is very very close to zero 
+		# and hence an outlier
+		data = data/1e-6
 		# Back fitting the optimal maps obtained from average data
-		intantaneousEEGLabel_countTimePoints_1, peakGfpLabel_countTimePoints_1= BackFit.backFit(data.T, conta_maps, labels, parameters[0])
-		intantaneousEEGLabel_countTimePoints, peakGfpLabel_countTimePoints= BackFit.backFit(data.T, non_conta_maps, labels, parameters[0])
-		intantaneousEEGLabel_onset_1, peakGfpLabel_onset_1 = BackFit.backFit(data.T, conta_maps, labels, parameters[1])
-		intantaneousEEGLabel_onset, peakGfpLabel_onset = BackFit.backFit(data.T, non_conta_maps, labels, parameters[1])
-		intantaneousEEGLabel_offset_1, peakGfpLabel_offset_1= BackFit.backFit(data.T, conta_maps, labels, parameters[2])
-		intantaneousEEGLabel_offset, peakGfpLabel_offset= BackFit.backFit(data.T, non_conta_maps, labels, parameters[2])
-		#print(labels)
+		
+		intantaneousEEGLabel, peakGfpLabel = BackFit.backFit(data.T, non_conta_maps)
+		
+
+
 		# Can be done in another way: Call Modified K means/findEffect function and take maps variable condition wise and 
 		# fit the maps using the sigDiffMapLabel as obtained from randomization 
-		# Now retaining the data using the sigDiffMap labels:
-		SigDiffMapLabels = []
-		backfitString = 'Significant'
-		for key in labels:
-			if backfitString in key:
-				SigDiffMapLabels.append(labels[key])
-		SigDiffMapLabels = list(set(sum(SigDiffMapLabels, [])))
+		 
 
-    # Extraction of data fitted with conta_maps using the NotSigDiffMapLabels
-		backfitData = np.zeros((data.shape[0]),dtype='float')
+    # Extraction of data for fitted with non_conta_maps using the SigDiffMapLabels and sepaarting data for 
+    # interpolation
+		backfitData = np.zeros((data.shape[0], data.shape[1]),dtype='float')
+		interpolateData = np.zeros((data.shape[0], data.shape[1]),dtype='float')
 
-		for i in range(len(times)):
+
+		for i in range(data.shape[1]):
 			for j in range(len(SigDiffMapLabels)):
-				if (intantaneousEEGLabel_countTimePoints[i] == SigDiffMapLabels[j]) or (
-					intantaneousEEGLabel_onset[i] == SigDiffMapLabels[j]) or (
-					intantaneousEEGLabel_offest[i] == SigDiffMapLabels[j]) or (
-					peakGfpLabel_countTimePoints[i] == SigDiffMapLabels[j]) or (
-					peakGfpLabel_onset[i] == SigDiffMapLabels[j]) or (
-					peakGfpLabel_offset[i] == SigDiffMapLabels[j]):
-					n_times = times[i]
-					backfitData[:] = data[:,n_times]
+				if (intantaneousEEGLabel[i] == SigDiffMapLabels[j]) or (peakGfpLabel[i] == SigDiffMapLabels[j]):
+					n_times = i
+					backfitData[:,i] = data[:,n_times]
+				else:
+					interpolateData[:,i] = data[:,n_times]
 
-	# Optional for now!!
+		backfitData = Interpolate.excludeZeros(backfitData)
+		
+		
+
+	# Function for interpolation of artifactual data obtained using the contaminated maps with SigNotDiffMap labels
 	if interpolate:
-		interpolateRaw = Interploate.interpolate(raw, conta_maps, labels)
+		interpolateRaw = Interploate.interpolate(interpolateData, conta_maps, interpolateLabel)
 		
 		
 		# Can be done in another way: Same strategy as used in backfit of data.
 	
 	return backfitData, interpolateRaw
 
+#conta_data, times = rawWithArtifactsDetected.get_data(return_times = True)
+		#time_samples = len(times) - (len(times) % 1024)
+		#non_conta_data = data[:,1:time_samples+1]
+		#non_conta_data = non_conta_data/1e-06
+		#optimalMaps, mapLabels, gfp_peaks, gev, cv = ModifiedKmeans.kmeans(non_conta_data.T, n_maps = 10, n_runs = 10, maxerr = 1e-06, maxiter = 1000, doplot=False) 
 
 #Function to detect EMG contaminated EEG segments after standard preprocessing of the data and 
 #then conducting power analysis in the 45-70Hz frequency band and to remove those artifactual 

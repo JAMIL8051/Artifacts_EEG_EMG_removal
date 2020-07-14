@@ -3,6 +3,9 @@ import numpy as np
 from scipy import signal
 
 
+
+
+
 #Function to calculate the mean along the n_ch axis that along the rows: Courtesy Wenjun Jia
 def zero_mean(data, axis=0):
     mean = data.mean(axis=1, keepdims=True)# keep dimension parameter preserves the original dimension after averaging
@@ -47,11 +50,11 @@ def fit_back(data, maps, distance= 10, n_std=3, polarity=False, instantaneous_ee
 
 
 # Final BackFit function
-def backFit(data, maps, labels,parameter): 
+def backFit(data, maps): 
     intantaneousEEGLabel = fit_back(data, maps, distance= 10, n_std=3, polarity= False, instantaneous_eeg = True)
     peakGfpLabel = fit_back(data, maps, distance= 10, n_std=3, polarity= False, instantaneous_eeg = False)
-
-    return intantaneousEEGLabel, peakGfpLabel
+    
+    return intantaneousEEGLabel, peakGfpLabel, SigDiffMapLabel, interpolateLabel
 
 
 
