@@ -33,55 +33,59 @@ the EMG artifacts removed raw data object for further validation and comparison.
 
 """
 def excludeZeros(data):
-    data = data[data!=0]
-    n_times_points = len(data)-len(data)% data.shape[0]
-    time_points_channel = len(data)//data.shape[0]
-    excludeZeroData = data[0:n_times_points].reshape(data.shape[0],time_points_channel)
+    dataExceptZero = data[data != 0]
+    n_times_points = (len(dataExceptZero)-(len(dataExceptZero) % data.shape[0]))
+    time_points_channel = len(dataExceptZero)// data.shape[0]
+    dataExceptZero = dataExceptZero[0:n_times_points].reshape(data.shape[0],time_points_channel)
 
-    return excludeZeroData
+    return dataExceptZero
 
 
 
 def interpolate(interpolateData, conta_maps, interpolateLabel):
     
-    interpolateData = excludeZeros(interpolateData) 
-    
     instantaneousFittedLabels, peakGfpFittedLabels = BackFit.backFit(interpolateData.T, conta_maps)
     
     # Extraction of data fitted with conta_maps using the NotSigDiffMapLabels
     
-    artifactualData = np.zeros((interpolateData.shape[0], interpolateData.shape[1]),dtype='float')
-    errorData = np.zeros((interpolateData.shape[0], interpolateData.shape[1]),dtype='float')
- 
-
+    artifactualTimes = np.zeros((interpolateData.shape[1]), dtype='int')
+    
     for i in range(interpolateData.shape[1]):
         for j in range(len(interpolateLabel)):
             if (instantaneousFittedLabels[i] == interpolateLabel[j]) or (peakGfpFittedLabels[i] == interpolateLabel[j]):
-                n_times = i
-                artifactualData[:,i] = data[:,n_times]
-            else:
-                errorData[:,i] = data[:,n_times]
+                artifactualTimes[i] = i
+                
      
-    artifactualData = excludeZeros(artifactualData) 
-    errorData = excludeZeros(errorData)
+    artifactualData = np.zeros((interpolateData.shape[0],interpolateData.shape[1]),dtype='float') 
+    residueData = np.zeros((interpolateData.shape[0],interpolateData.shape[1]),dtype='float')
+    
+    for i in range(interpolateData.shape[1]):
+        if artifactualTimes[i]!= 0:
+            artifactualData[:,i] = interpolateData[:,i]
+        elif artifactualTimes[i] == 0:
+            residueData[:,i] = interpolateData[:,i]
+
+    artifactualDataExcludeZero = excludeZeros(artifactualData)
+    residueDataExcludeZero = excludeZeros(residueData)
+
 
 
     
 
 
 
-    info = mne.create_info(ch_names = Configuration.channelList(), sfreq = raw.info['sfreq'], 
-						ch_types= ['eeg']*data.shape[0], montage= Configuration.channelLayout())
+    #info = mne.create_info(ch_names = Configuration.channelList(), sfreq = raw.info['sfreq'], 
+				#		ch_types= ['eeg']*data.shape[0], montage= Configuration.channelLayout())
 
-    # Adding some more information
-    info['description'] = Configuration.descibeInterpolate() 
-    info['bads'] = Configuration.channelList() # Taking all the channels
+    ## Adding some more information
+    #info['description'] = Configuration.descibeInterpolate() 
+    # # Taking all the channels
     
     
-    interpolateRaw = mne.io.RawArray(interpolateData, info)
-    interpolateRaw = interpolateRaw.interpolate_bads(reset_bads = False, mode='accurate',origin = (0.0,0.0,0.04))
+    #interpolateRaw = mne.io.RawArray(interpolateData, info)
+    #interpolateRaw = interpolateRaw.interpolate_bads(reset_bads = False, mode='accurate',origin = (0.0,0.0,0.04))
 
-    return interpolateRaw, errorData
+    return artifactualDataExcludeZero, residueDataExcludeZero
 
 
 

@@ -62,27 +62,23 @@ def detectArtifacts(filepath):
 # of the big function
 # Function for plotting the optimal number of microstate maps obtained after microstate analysis        
 # Function to remove EMG artifacts using microstate analysis and randomization statistics
+
 def separateLabels(labels):
-    SigDiffMapLabel = []
-    SigNotDiffMapLabel = []
-    string = 'notSignificant'
+	SigDiffMapLabel = []
+	SigNotDiffMapLabel = []
+	stringCheck = 'notSignificant'
 
-    for key in labels:
-        if string not in key:
-            SigDiffMapLabel.append(labels[key])
-        else:
-            SigNotDiffMapLabel.append(labels[key])
-    
-    SigDiffMapLabel = set(list(set(sum(SigDiffMapLabel, []))))
-    SigNotDiffMapLabel = set(list(set(sum(SigNotDiffMapLabel, []))))
+	for key in labels:
+		if stringCheck not in key:
+			SigDiffMapLabel.append(labels[key])
+		else:
+			SigNotDiffMapLabel.append(labels[key])
+	SigDiffMapLabel = set(list(set(sum(SigDiffMapLabel,[]))))
+	SigNotDiffMapLabel = set(list(set(sum(SigNotDiffMapLabel,[]))))
+	interpolateLabel = SigNotDiffMapLabel - SigDiffMapLabel
+	interpolateLabel = list(interpolateLabel)
 
-    interpolateLabel = SigNotDiffMapLabel - SigDiffMapLabel
-    interpolateLabel = list(interpolateLabel)
-
-
-    return SigDiffMapLabel, interpolateLabel
-
-
+	return list(SigDiffMapLabel), interpolateLabel
 
 
 
@@ -95,14 +91,11 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 	
 	# Conduct randomized statistics with help of quantifiers of microstate classes or maps to generate the 
 	# significantly different maps with labels for backfit and significantly not different ones for interpolation
-	raw_non_conta_data, labels, parameters, conta_maps, non_conta_maps = RandomizationStatistics.randomizationStat(raw, 
-																					rawWithArtifactsDetected, 
-																					artifactualData, 
-																					optimalNumberOfCluster = 10)
+	raw_non_conta_data, labels, parameters, conta_maps, non_conta_maps = RandomizationStatistics.randomizationStat(raw,rawWithArtifactsDetected, artifactualData, optimalNumberOfCluster = 10)
 
 	# Separting the labels parameter into two other ones: sigDiffmaplabel and interpolateLabel for the 
 	# backfit and interpolation part.
-	SigDiffMapLabel, interpolateLabel = separateLabels(labels)
+	sigDiffMapLabel, interpolateLabel = separateLabels(labels)
 
 
 
@@ -115,59 +108,91 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 	# results are obtained.
 	  
 	if backfit:
-		data = raw.pick(picks = Configuration.channelList()).get_data()
+		data, times = raw.pick(picks = Configuration.channelList()).get_data(return_times = True)
 		data = data[:,1:]# Removing the first time-sample of all the channels as it is very very close to zero 
 		# and hence an outlier
+		times = times[1:]
 		data = data/1e-6
-		# Back fitting the optimal maps obtained from average data
+		# Back fitting the non_conta_maps obtained from the "obsereved-effect"  in the data in randomization 
+		# statistical analysis. See details in RandomizationStat function in the script Randomization Statistics
 		
 		intantaneousEEGLabel, peakGfpLabel = BackFit.backFit(data.T, non_conta_maps)
 		
+		backfitTimes = np.zeros((data.shape[1]),dtype='int')
 
+		for i in range(len(times)):
+			for j in range(len(sigDiffMapLabel)):
+				if (intantaneousEEGLabel[i] == sigDiffMapLabel[j]) or (peakGfpLabel[i] == sigDiffMapLabel[j]):
+					backfitTimes[i] = i
+		
 
 		# Can be done in another way: Call Modified K means/findEffect function and take maps variable condition wise and 
-		# fit the maps using the sigDiffMapLabel as obtained from randomization 
-		 
+		# fit the maps using the sigDiffMapLabel as obtained from randomization
 
-    # Extraction of data for fitted with non_conta_maps using the SigDiffMapLabels and sepaarting data for 
-    # interpolation
+		# Extraction of data for fitted with non_conta_maps using the SigDiffMapLabels and sepaarting data for 
+		# interpolation
 		backfitData = np.zeros((data.shape[0], data.shape[1]),dtype='float')
-		interpolateData = np.zeros((data.shape[0], data.shape[1]),dtype='float')
-
+		interpolateData = np.zeros((data.shape[0],data.shape[1]),dtype='float')
 
 		for i in range(data.shape[1]):
-			for j in range(len(SigDiffMapLabels)):
-				if (intantaneousEEGLabel[i] == SigDiffMapLabels[j]) or (peakGfpLabel[i] == SigDiffMapLabels[j]):
-					n_times = i
-					backfitData[:,i] = data[:,n_times]
-				else:
-					interpolateData[:,i] = data[:,n_times]
+			if backfitTimes[i]!= 0:
+				backfitData[:,i] = data[:,i]
+			elif backfitTimes[i] == 0:
+				interpolateData[:,i] = data[:,i]
 
-		backfitData = Interpolate.excludeZeros(backfitData)
+		backfittedData = Interpolate.excludeZeros(backfitData)
+		interpolateDataExcludeZero = Interpolate.excludeZeros(interpolateData)
 		
 		
 
 	# Function for interpolation of artifactual data obtained using the contaminated maps with SigNotDiffMap labels
 	if interpolate:
-		interpolateRaw = Interploate.interpolate(interpolateData, conta_maps, interpolateLabel)
-		
-		
-		# Can be done in another way: Same strategy as used in backfit of data.
-	
-	return backfitData, interpolateRaw
+		artifactualDataExcludeZero, residueDataExcludeZero = Interploate.interpolate(interpolateDataExcludeZero, 
+																			   conta_maps, interpolateLabel)
+		bads_channels = Configuration.channelList()
 
-#conta_data, times = rawWithArtifactsDetected.get_data(return_times = True)
-		#time_samples = len(times) - (len(times) % 1024)
-		#non_conta_data = data[:,1:time_samples+1]
-		#non_conta_data = non_conta_data/1e-06
-		#optimalMaps, mapLabels, gfp_peaks, gev, cv = ModifiedKmeans.kmeans(non_conta_data.T, n_maps = 10, n_runs = 10, maxerr = 1e-06, maxiter = 1000, doplot=False) 
+		raw = raw.drop_channels(ch_names = bad_channels)
+
+		channelNamesForInterpolation = raw.ch_names
+		# Removing the last channel as it is the stimulus channel in the data
+		channelNamesForInterpolation = channelNamesForInterpolation[:len(channelNamesForInterpolation)-1]
+
+		for i in bad_channels:
+			channelNamesForInterpolation.append(i)
+
+		# We need the 48 channels to interpolate the 16 bad channels. See details configuration file for the 
+		# hard coded parameters/variables/functions
+		totalCountChannels = len(channelNamesForInterpolation)-len(bad_channels)
+
+		data = raw.get_data()
+		data = data[:totalCountChannels,1:artifactualDataExcludeZero.shape[1]+1]# Ignoring the first data sample
+		data = data/1e-6
+
+		# Joining the artifactual data to be interpolated with the rest 48 channel-data.
+		finalData = np.concatenate((data, artifactualDataExcludeZero),axis = 0)
+
+		# Creating the raw mne object data-structure
+		info = mne.create_info(ch_names = channelNamesForInterpolation, sfreq = raw.info['sfreq'],
+						 ch_types= ['eeg']*len(channelNamesForInterpolation), 
+						 montage= Configuration.channelLayout())
+
+		interpolateRaw = mne.io.RawArray(finalData, info)
+		interpolateRaw.info['bads'] = bad_channels # Taking all the channels
+		interpolateRaw = interpolateRaw.interpolate_bads(reset_bads = False, mode='accurate', 
+												   origin = (0.0,0.0,0.04))
+		# After interpolation of the bad channels, taking only the channel-data
+		interpolatedData = interpolateRaw.pick(picks = bad_channels).get_data()
+
+
+	return backfittedData, interpolatedData
+
 
 #Function to detect EMG contaminated EEG segments after standard preprocessing of the data and 
 #then conducting power analysis in the 45-70Hz frequency band and to remove those artifactual 
 #segments by doing micrsotate analysis and randomization statistics.
 
-def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit=True, interpolate= True, 
-							   validation=False, comparison= False, visualize=False):
+def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, interpolate= True, 
+							   validation = False, comparison = False, visualize = False):
 
 	#Function to detect artifacts
 	raw, ch_names_combined, artifactualData, finalEmgData2 = detectArtifacts(filepath)
@@ -179,11 +204,14 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit=True, interpolat
 	
 	
 	# Function to remove the EMG artifacts
-	backfitData, interpolateRaw = removeArtifacts(raw, finalEmgData2Raw, artifactualData, trainDataPath, backfit, 
+	backfitDataExcludeZero, interpolatedData  = removeArtifacts(raw, finalEmgData2Raw, artifactualData, trainDataPath, backfit, 
 											     interpolate)
+
+	
 	# Data recontruction
-	emgFreeData = np.concatenate((backfitData,interpolateRaw.get_data()),axis = 0)
-	# End of data analysis and the algorithm
+	finalEmgFreeData = np.concatenate((backfitData.T,interpolatedData.T),axis = 0)
+
+	#End of data analysis and the algorithm----------------------------------------
 
 
 	# For validation purpose with simulated EEG data
@@ -198,10 +226,12 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit=True, interpolat
 	if visualize:
 		montage = mne.channels.make_standard_montage(Configuration.channelLayout())
 		info = mne.create_info(ch_names=montage.ch_names, sfreq= raw.info['sfreq'], ch_types='eeg', montage=montage)
+		finalEmgFreeRaw = mne.io.RawArray(finalEmgFreeData, info)
+
 		sphere = mne.make_sphere_model(r0='auto', head_radius='auto', info=info)
 		fig = mne.viz.plot_alignment(show_axes=True, dig='fiducials', surfaces='head', bem=sphere, info=info)# Plot options
 		set_3d_view(figure=fig, azimuth=135, elevation=80)
 		set_3d_title(figure=fig, title=current_montage)
-		raw.plot()
+		finalEmgFreeRaw.plot()
 
-	return None	
+	return None

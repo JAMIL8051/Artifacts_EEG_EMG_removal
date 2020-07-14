@@ -54,7 +54,7 @@ def backFit(data, maps):
     intantaneousEEGLabel = fit_back(data, maps, distance= 10, n_std=3, polarity= False, instantaneous_eeg = True)
     peakGfpLabel = fit_back(data, maps, distance= 10, n_std=3, polarity= False, instantaneous_eeg = False)
     
-    return intantaneousEEGLabel, peakGfpLabel, SigDiffMapLabel, interpolateLabel
+    return intantaneousEEGLabel, peakGfpLabel
 
 
 
