@@ -8,8 +8,6 @@ import BackFit
 import Interpolate
 import numpy as np
 import mne
-from mne.viz import set_3d_title, set_3d_view
-import matplotlib.pyplot as plt
 
  
 # This script start from the function: "detectAndRemoveEegArtifact". This function detects the EMG artifacts due to 
@@ -82,7 +80,8 @@ def separateLabels(labels):
 
 
 
-def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPath, backfit=True, interpolate = True):
+def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPath, backfit=True, 
+					interpolate = True):
 
 	# First step: Find optimal number of microstate classes
 	# Doing the microstate analysis to generate the optimal number of microstate classes
@@ -147,7 +146,7 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 
 	# Function for interpolation of artifactual data obtained using the contaminated maps with SigNotDiffMap labels
 	if interpolate:
-		artifactualDataExcludeZero, residueDataExcludeZero = Interploate.interpolate(interpolateDataExcludeZero, 
+		artifactualDataExcludeZero, residueDataExcludeZero = Interpolate.interpolate(interpolateDataExcludeZero, 
 																			   conta_maps, interpolateLabel)
 		bads_channels = Configuration.channelList()
 
@@ -204,34 +203,45 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, interpola
 	
 	
 	# Function to remove the EMG artifacts
-	backfitDataExcludeZero, interpolatedData  = removeArtifacts(raw, finalEmgData2Raw, artifactualData, trainDataPath, backfit, 
+	backfittedData, interpolatedData  = removeArtifacts(raw, finalEmgData2Raw, artifactualData, trainDataPath, backfit, 
 											     interpolate)
 
 	
 	# Data recontruction
 	finalEmgFreeData = np.concatenate((backfitData.T,interpolatedData.T),axis = 0)
-
+	info = mne.create_info(ch_names=Configuration.channelList(), sfreq= raw.info['sfreq'], ch_types='eeg', 
+	montage = Configuration.channelLayout())
+	finalEmgFreeRaw = mne.io.RawArray(finalEmgFreeData*1e-6, info)
+	
 	#End of data analysis and the algorithm----------------------------------------
 
 
-	# For validation purpose with simulated EEG data
+	# For validation purpose: Runnnig a PREP analysis on the data and comparing with simulated EEG data
 	if validation:
-		validateWithSimulatedData()
+		# 1st step: PREP ANALYSIS to check find bad channels in the data!!
+		validationResults = validate(finalEmgFreeRaw)
+
+		
 
 	# For standard comparison with other method like: ICA+MARA 
 	if comparison:
-		compareWithIcaMara()
+
+		# 1st step comparing with the simulated EEG data
+		resultsWithSimEEG = validateWithSimulatedData(finalEmgFreeRaw)
+
+		# 2nd step compare with the results of ICA and MARA method
+		compareWithIcaMara(finalEmgFreeRaw)
 
 	# Display of all the results and generation of report of the analysis
 	if visualize:
-		montage = mne.channels.make_standard_montage(Configuration.channelLayout())
-		info = mne.create_info(ch_names=montage.ch_names, sfreq= raw.info['sfreq'], ch_types='eeg', montage=montage)
-		finalEmgFreeRaw = mne.io.RawArray(finalEmgFreeData, info)
+		# Plotting the preprocessed raw data
+		raw.plot(duration = 0.5)
 
-		sphere = mne.make_sphere_model(r0='auto', head_radius='auto', info=info)
-		fig = mne.viz.plot_alignment(show_axes=True, dig='fiducials', surfaces='head', bem=sphere, info=info)# Plot options
-		set_3d_view(figure=fig, azimuth=135, elevation=80)
-		set_3d_title(figure=fig, title=current_montage)
-		finalEmgFreeRaw.plot()
+		# Plotting the artifactual data
+		finalEmgData2Raw.plot(duration = 0.5)
+
+		# Plotting the final EMG free data
+		finalEmgFreeRaw.plot(duration  = 0.5)
+		
 
 	return None
