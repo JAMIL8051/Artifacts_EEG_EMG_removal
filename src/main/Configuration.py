@@ -69,7 +69,7 @@ Thomas Koenig • Maria Stein • Matthias Grieder •
 Mara Kottlow. Brain Topogr (2014) 27:72–83 DOI 10.1007/s10548-013-0310-1
 """    
 def repetitionsCount():
-    return 300
+    return 5
 
 def channelLocationFile():
     return "C:/projects/eeg_microstates/src/channel_location_files/ChannelLocationsForOptimalCluster.xyz"
@@ -99,5 +99,16 @@ def numberOfMicrostateQuantifiers():
 
 def descibeInterpolate():
     return 'Customized dataset for the interpolation part of the algorithm'
+
+# Sets the threshold values for cheking the data quality. See details in the following paper.
+"""
+    Automagic: Standardized preprocessing of big EEG data
+    Andreas Pedroni 1, Amirreza Bahreini 2, Nicolas Langer 3
+"""
+def callThresholdValues():
+    return [10,20,30,40,50,60,70,80,90]
+
+def setAsdPlotTittle():
+    return 'Amplitude Spectral density in the 45-70 Hz band for all channels of interest'
 
 

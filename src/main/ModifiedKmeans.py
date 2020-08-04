@@ -10,109 +10,109 @@ import scipy.stats
 import pandas as pd
 
 
-#Edf file reader function
-def read_edf(filename):
-    """Basic EDF file format reader
+##Edf file reader function
+#def read_edf(filename):
+#    """Basic EDF file format reader
 
-    EDF specifications: http://www.edfplus.info/specs/edf.html
+#    EDF specifications: http://www.edfplus.info/specs/edf.html
 
-    Args:
-        filename: full path to the '.edf' file
-    Returns:
-        chs: list of channel names
-        fs: sampling frequency in [Hz]
-        data: EEG data as numpy.array (samples x channels)
-    """
+#    Args:
+#        filename: full path to the '.edf' file
+#    Returns:
+#        chs: list of channel names
+#        fs: sampling frequency in [Hz]
+#        data: EEG data as numpy.array (samples x channels)
+#    """
 
-    def readn(n):
-        """read n bytes."""
-        return np.fromfile(fp, sep='', dtype=np.int8, count=n)
+#    def readn(n):
+#        """read n bytes."""
+#        return np.fromfile(fp, sep='', dtype=np.int8, count=n)
 
-    def bytestr(bytes, i):
-        """convert byte array to string."""
-        return np.array([bytes[k] for k in range(i*8, (i+1)*8)]).tostring()
+#    def bytestr(bytes, i):
+#        """convert byte array to string."""
+#        return np.array([bytes[k] for k in range(i*8, (i+1)*8)]).tostring()
 
-    fp = open(filename, 'r')
-    x = np.fromfile(fp, sep='', dtype=np.uint8, count=256).tostring()
-    header = {}
-    header['version'] = x[0:8]
-    header['patientID'] = x[8:88]
-    header['recordingID'] = x[88:168]
-    header['startdate'] = x[168:176]
-    header['starttime'] = x[176:184]
-    header['length'] = int(x[184:192]) # header length (bytes)
-    header['reserved'] = x[192:236]
-    header['records'] = int(x[236:244]) # number of records
-    header['duration'] = float(x[244:252]) # duration of each record [sec]
-    header['channels'] = int(x[252:256]) # ns - number of signals
-    n_ch = header['channels']  # number of EEG channels
-    header['channelname'] = (readn(16*n_ch)).tostring()
-    header['transducer'] = (readn(80*n_ch)).tostring().split()
-    header['physdime'] = (readn(8*n_ch)).tostring().split()
-    header['physmin'] = []
-    b = readn(8*n_ch)
-    for i in range(n_ch): header['physmin'].append(float(bytestr(b, i)))
-    header['physmax'] = []
-    b = readn(8*n_ch)
-    for i in range(n_ch): header['physmax'].append(float(bytestr(b, i)))
-    header['digimin'] = []
-    b = readn(8*n_ch)
-    for i in range(n_ch): header['digimin'].append(int(bytestr(b, i)))
-    header['digimax'] = []
-    b = readn(8*n_ch)
-    for i in range(n_ch): header['digimax'].append(int(bytestr(b, i)))
-    header['prefilt'] = (readn(80*n_ch)).tostring().split()
-    header['samples_per_record'] = []
-    b = readn(8*n_ch)
-    for i in range(n_ch): header['samples_per_record'].append(float(bytestr(b, i)))
-    nr = header['records']
-    n_per_rec = int(header['samples_per_record'][0])
-    n_total = int(nr*n_per_rec*n_ch)
-    fp.seek(header['length'],os.SEEK_SET)  # header end = data start
-    data = np.fromfile(fp, sep='', dtype=np.int16, count=n_total)  # count=-1
-    fp.close()
+#    fp = open(filename, 'r')
+#    x = np.fromfile(fp, sep='', dtype=np.uint8, count=256).tostring()
+#    header = {}
+#    header['version'] = x[0:8]
+#    header['patientID'] = x[8:88]
+#    header['recordingID'] = x[88:168]
+#    header['startdate'] = x[168:176]
+#    header['starttime'] = x[176:184]
+#    header['length'] = int(x[184:192]) # header length (bytes)
+#    header['reserved'] = x[192:236]
+#    header['records'] = int(x[236:244]) # number of records
+#    header['duration'] = float(x[244:252]) # duration of each record [sec]
+#    header['channels'] = int(x[252:256]) # ns - number of signals
+#    n_ch = header['channels']  # number of EEG channels
+#    header['channelname'] = (readn(16*n_ch)).tostring()
+#    header['transducer'] = (readn(80*n_ch)).tostring().split()
+#    header['physdime'] = (readn(8*n_ch)).tostring().split()
+#    header['physmin'] = []
+#    b = readn(8*n_ch)
+#    for i in range(n_ch): header['physmin'].append(float(bytestr(b, i)))
+#    header['physmax'] = []
+#    b = readn(8*n_ch)
+#    for i in range(n_ch): header['physmax'].append(float(bytestr(b, i)))
+#    header['digimin'] = []
+#    b = readn(8*n_ch)
+#    for i in range(n_ch): header['digimin'].append(int(bytestr(b, i)))
+#    header['digimax'] = []
+#    b = readn(8*n_ch)
+#    for i in range(n_ch): header['digimax'].append(int(bytestr(b, i)))
+#    header['prefilt'] = (readn(80*n_ch)).tostring().split()
+#    header['samples_per_record'] = []
+#    b = readn(8*n_ch)
+#    for i in range(n_ch): header['samples_per_record'].append(float(bytestr(b, i)))
+#    nr = header['records']
+#    n_per_rec = int(header['samples_per_record'][0])
+#    n_total = int(nr*n_per_rec*n_ch)
+#    fp.seek(header['length'],os.SEEK_SET)  # header end = data start
+#    data = np.fromfile(fp, sep='', dtype=np.int16, count=n_total)  # count=-1
+#    fp.close()
 
-    # re-order
-    data = np.reshape(data,(n_per_rec,n_ch,nr),order='F')
-    data = np.transpose(data,(0,2,1))
-    data = np.reshape(data,(n_per_rec*nr,n_ch),order='F')
+#    # re-order
+#    data = np.reshape(data,(n_per_rec,n_ch,nr),order='F')
+#    data = np.transpose(data,(0,2,1))
+#    data = np.reshape(data,(n_per_rec*nr,n_ch),order='F')
 
-    # convert to physical dimensions
-    for k in range(data.shape[1]):
-        d_min = float(header['digimin'][k])
-        d_max = float(header['digimax'][k])
-        p_min = float(header['physmin'][k])
-        p_max = float(header['physmax'][k])
-        if ((d_max-d_min) > 0):
-            data[:,k] = p_min+(data[:,k]-d_min)/(d_max-d_min)*(p_max-p_min)
+#    # convert to physical dimensions
+#    for k in range(data.shape[1]):
+#        d_min = float(header['digimin'][k])
+#        d_max = float(header['digimax'][k])
+#        p_min = float(header['physmin'][k])
+#        p_max = float(header['physmax'][k])
+#        if ((d_max-d_min) > 0):
+#            data[:,k] = p_min+(data[:,k]-d_min)/(d_max-d_min)*(p_max-p_min)
 
-    print(header)
-    return header['channelname'].split(),\
-           header['samples_per_record'][0]/header['duration'],\
-           data
+#    print(header)
+#    return header['channelname'].split(),\
+#           header['samples_per_record'][0]/header['duration'],\
+#           data
 
 
 #Channels location file reader function
-def read_xyz(filename):
-    """Read EEG electrode locations in xyz format
+#def read_xyz(filename):
+#    """Read EEG electrode locations in xyz format
 
-    Args:
-        filename: full path to the '.xyz' file
-    Returns:
-        locs: n_channels x 3 (numpy.array)
-    """
-    ch_names = []
-    locs = []
-    with open(filename, 'r') as f:
-        l = f.readline()  # header line
-        while l:
-            l = f.readline().strip().split("\t")
-            if (l != ['']):
-                ch_names.append(l[0])
-                locs.append([float(l[1]), float(l[2]), float(l[3])])
-            else:
-                l = None
-    return ch_names, np.array(locs)
+#    Args:
+#        filename: full path to the '.xyz' file
+#    Returns:
+#        locs: n_channels x 3 (numpy.array)
+#    """
+#    ch_names = []
+#    locs = []
+#    with open(filename, 'r') as f:
+#        l = f.readline()  # header line
+#        while l:
+#            l = f.readline().strip().split("\t")
+#            if (l != ['']):
+#                ch_names.append(l[0])
+#                locs.append([float(l[1]), float(l[2]), float(l[3])])
+#            else:
+#                l = None
+#    return ch_names, np.array(locs)
 
 
 def findstr(s, L):
@@ -217,7 +217,8 @@ def eeg2map(data):
     return top_norm
 
 
-def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
+
+def kmeans(data, numMaps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
     """Modified K-means clustering as detailed in:
     [1] Pascual-Marqui et al., IEEE TBME (1995) 42(7):658--665
     [2] Murray et al., Brain Topography(2008) 20:249--264.
@@ -236,8 +237,8 @@ def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
         gev: global explained variance (0..1)
         cv: value of the cross-validation criterion
     """
-    n_t = data.shape[0]
-    n_ch = data.shape[1]
+    numTimePoints = data.shape[0]
+    numChannels = data.shape[1]
     data = data - data.mean(axis = 1, keepdims = True)
 
     # GFP peaks
@@ -259,7 +260,7 @@ def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
     L_list =    []  # microstate label sequence for each k-means run
     for run in range(n_runs):
         # initialize random cluster centroids (indices w.r.t. n_gfp)
-        rndi = np.random.permutation(n_gfp)[:n_maps]
+        rndi = np.random.permutation(n_gfp)[:numMaps]
         maps = V[rndi, :]
         # normalize row-wise (across EEG channels)
         maps /= np.sqrt(np.sum(maps**2, axis=1, keepdims=True))
@@ -271,10 +272,11 @@ def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
         while ( (np.abs((var0-var1)/var0) > maxerr) & (n_iter < maxiter) ):
             # (step 3) microstate sequence (= current cluster assignment)
             C = np.dot(V, maps.T)
-            C /= (n_ch*np.outer(gfp[gfp_peaks], np.std(maps, axis=1)))
+            C /= (numChannels*np.outer(gfp[gfp_peaks], np.std(maps, axis=1)))
             L = np.argmax(C**2, axis=1)
             # (step 4)
-            for k in range(n_maps):
+
+            for k in range(numMaps):
                 Vt = V[L==k, :]
                 # (step 4a)
                 Sk = np.dot(Vt.T, Vt)
@@ -286,7 +288,7 @@ def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
             # (step 5)
             var1 = var0
             var0 = sumV2 - np.sum(np.sum(maps[L, :]*V, axis=1)**2)
-            var0 /= (n_gfp*(n_ch-1))
+            var0 /= (n_gfp*(numChannels-1))
             n_iter += 1
         if (n_iter < maxiter):
             print("\t\tK-means run {:d}/{:d} converged after {:d} iterations.".format(run+1, n_runs, n_iter))
@@ -295,15 +297,15 @@ def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
 
         # CROSS-VALIDATION criterion for this run (step 8)
         C_ = np.dot(data, maps.T)
-        C_ /= (n_ch*np.outer(gfp, np.std(maps, axis=1)))
+        C_ /= (numChannels*np.outer(gfp, np.std(maps, axis=1)))
         L_ = np.argmax(C_**2, axis=1)
         var = np.sum(data**2) - np.sum(np.sum(maps[L_, :]*data, axis=1)**2)
-        var /= (n_t*(n_ch-1))
-        cv = var * (n_ch-1)**2/(n_ch-n_maps-1.)**2
+        var /= (numTimePoints*(numChannels-1))
+        cv = var * (numChannels-1)**2/(numChannels-numMaps-1.)**2
 
         # GEV (global explained variance) of cluster k
-        gev = np.zeros(n_maps)
-        for k in range(n_maps):
+        gev = np.zeros(numMaps)
+        for k in range(numMaps):
             r = L==k
             gev[k] = np.sum(gfp_values[r]**2 * C[r,k]**2)/gfp2
         gev_total = np.sum(gev)
@@ -328,9 +330,9 @@ def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
         # matplotlib's perceptually uniform sequential colormaps:
         # magma, inferno, plasma, viridis
         cm = plt.cm.magma
-        fig, axarr = plt.subplots(1, n_maps, figsize=(20,5))
+        fig, axarr = plt.subplots(1, numMaps, figsize=(20,5))
         fig.patch.set_facecolor('white')
-        for imap in range(n_maps):
+        for imap in range(numMaps):
             axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin='lower')
             axarr[imap].set_xticks([])
             axarr[imap].set_xticklabels([])
@@ -344,7 +346,7 @@ def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
         order_str = input("\n\t\tAssign map labels (e.g. 0, 2, 1, 3): ")
         order_str = order_str.replace(",", "")
         order_str = order_str.replace(" ", "")
-        if (len(order_str) != n_maps):
+        if (len(order_str) != numMaps):
             if (len(order_str)==0):
                 print("\t\tEmpty input string.")
             else:
@@ -352,7 +354,7 @@ def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
                 print("\t\tNumber of labels does not equal number of clusters.")
             print("\t\tContinue using the original assignment...\n")
         else:
-            order = np.zeros(n_maps, dtype=int)
+            order = np.zeros(numMaps, dtype=int)
             for i, s in enumerate(order_str):
                 order[i] = int(s)
             print("\t\tRe-ordered labels: {:s}".format(", ".join(order_str)))
@@ -362,9 +364,9 @@ def kmeans(data, n_maps, n_runs= 10, maxerr=1e-6, maxiter=1000, doplot = False):
                 L[i] = order[L[i]]
             gev = gev[order]
             # Figure
-            fig, axarr = plt.subplots(1, n_maps, figsize=(20,5))
+            fig, axarr = plt.subplots(1, numMaps, figsize=(20,5))
             fig.patch.set_facecolor('white')
-            for imap in range(n_maps):
+            for imap in range(numMaps):
                 axarr[imap].imshow(eeg2map(maps[imap, :]), cmap=cm, origin='lower')
                 axarr[imap].set_xticks([])
                 axarr[imap].set_xticklabels([])

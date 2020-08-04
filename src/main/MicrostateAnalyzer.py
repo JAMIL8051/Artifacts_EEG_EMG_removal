@@ -113,7 +113,7 @@ def analyzeMicrostate(trainDataPath):
     #    trainDataPath = Configuration.defaultTrainDataFolder()
     
     subjectWiseData, subjectConditionWiseData = loadData(trainDataPath)
-    #optimalCluster = Cluster.findOptimalCluster(subjectWiseData, subjectConditionWiseData)
+    optimalCluster = Cluster.findOptimalCluster(subjectWiseData, subjectConditionWiseData)
     optimalCluster = 10
     data = subjectWiseData.mean(axis = 0).T
     # Zoom in of the data in to micro volt from volts

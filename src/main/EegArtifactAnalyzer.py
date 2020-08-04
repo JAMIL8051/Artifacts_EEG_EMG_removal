@@ -6,6 +6,7 @@ import ModifiedKmeans
 import RandomizationStatistics
 import BackFit
 import Interpolate
+#import ComparisonWithICAMARA
 import numpy as np
 import mne
 
@@ -85,7 +86,7 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 
 	# First step: Find optimal number of microstate classes
 	# Doing the microstate analysis to generate the optimal number of microstate classes
-	# optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
+	optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
 	
 	
 	# Conduct randomized statistics with help of quantifiers of microstate classes or maps to generate the 
@@ -215,22 +216,14 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, interpola
 	
 	#End of data analysis and the algorithm----------------------------------------
 
-
-	# For validation purpose: Runnnig a PREP analysis on the data and comparing with simulated EEG data
-	if validation:
-		# 1st step: PREP ANALYSIS to check find bad channels in the data!!
-		validationResults = validate(finalEmgFreeRaw)
-
-		
-
-	# For standard comparison with other method like: ICA+MARA 
+	# For standard comparison with other method like: ICA+MARA
 	if comparison:
 
 		# 1st step comparing with the simulated EEG data
-		resultsWithSimEEG = validateWithSimulatedData(finalEmgFreeRaw)
+		#resultsWithSimEEG = validateWithSimulatedData(finalEmgFreeRaw)
 
 		# 2nd step compare with the results of ICA and MARA method
-		compareWithIcaMara(finalEmgFreeRaw)
+		comaprisonResults, rawICAMARA = ComparisonWithICAMARA.compareWithIcaMara(finalEmgFreeRaw)
 
 	# Display of all the results and generation of report of the analysis
 	if visualize:
@@ -240,8 +233,16 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, interpola
 		# Plotting the artifactual data
 		finalEmgData2Raw.plot(duration = 0.5)
 
-		# Plotting the final EMG free data
+		# Plotting the final EMG free data of the proposed method
 		finalEmgFreeRaw.plot(duration  = 0.5)
+
+		# Plotting the final EMG free data obtained from the method ICA with MARA
+		rawICAMARA.plot(duration = 0.5)
+
+		# Printing the data quality metrices after removal of EMG artifacts
+		for key in comaprisonResults:
+			for k in comaprisonResults[key]: 
+				print(comaprisonResults[key][k])
 		
 
 	return None

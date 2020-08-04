@@ -70,17 +70,17 @@ def meanCorrelation(subjectWiseData, subjects):
     
     n_maps = 3
     
-    findMeanCorrelation = np.zeros((Configuration.numberOfCluster()-3),dtype = 'float')
+    meanCorrelation = np.zeros((Configuration.numberOfCluster()-3),dtype = 'float')
 
     while n_maps<Configuration.numberOfCluster():    
         maps, labels, gfp_peaks, gev, cv = ModifiedKmeans.kmeans(meanTrainData.T, n_maps, n_runs = 50, maxerr = 1e-6, 
                                                   maxiter = 1000, doplot = False)
           
-        findMeanCorrelation[n_maps-3] = calcMeanCorrelation(meanTestData, maps)
+        meanCorrelation[n_maps-3] = calcMeanCorrelation(meanTestData, maps)
         
         n_maps += 1
 
-    return findMeanCorrelation
+    return meanCorrelation
         
 
 def findOptimalCluster(subjectWiseData, subjectConditionWiseData):
