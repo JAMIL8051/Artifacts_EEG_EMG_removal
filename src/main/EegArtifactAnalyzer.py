@@ -6,7 +6,7 @@ import ModifiedKmeans
 import RandomizationStatistics
 import BackFit
 import Interpolate
-#import ComparisonWithICAMARA
+import ComparisonWithICAMARA
 import numpy as np
 import mne
 
@@ -84,9 +84,11 @@ def separateLabels(labels):
 def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPath, backfit=True, 
 					interpolate = True):
 
+	raw2 = raw.copy()
+
 	# First step: Find optimal number of microstate classes
 	# Doing the microstate analysis to generate the optimal number of microstate classes
-	optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
+	# optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
 	
 	
 	# Conduct randomized statistics with help of quantifiers of microstate classes or maps to generate the 
@@ -108,7 +110,8 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 	# results are obtained.
 	  
 	if backfit:
-		data, times = raw.pick(picks = Configuration.channelList()).get_data(return_times = True)
+		backfitRaw = raw2.copy() 
+		data, times = backfitRaw.pick(picks = Configuration.channelList()).get_data(return_times = True)
 		data = data[:,1:]# Removing the first time-sample of all the channels as it is very very close to zero 
 		# and hence an outlier
 		times = times[1:]
@@ -149,11 +152,12 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 	if interpolate:
 		artifactualDataExcludeZero, residueDataExcludeZero = Interpolate.interpolate(interpolateDataExcludeZero, 
 																			   conta_maps, interpolateLabel)
-		bads_channels = Configuration.channelList()
+		bad_channels = Configuration.channelList()
 
-		raw = raw.drop_channels(ch_names = bad_channels)
+		interpolateRaw = raw2.copy()
+		interpolateRaw = interpolateRaw.drop_channels(ch_names = bad_channels)
 
-		channelNamesForInterpolation = raw.ch_names
+		channelNamesForInterpolation = interpolateRaw.ch_names
 		# Removing the last channel as it is the stimulus channel in the data
 		channelNamesForInterpolation = channelNamesForInterpolation[:len(channelNamesForInterpolation)-1]
 
@@ -164,7 +168,7 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 		# hard coded parameters/variables/functions
 		totalCountChannels = len(channelNamesForInterpolation)-len(bad_channels)
 
-		data = raw.get_data()
+		data = interpolateRaw.get_data()
 		data = data[:totalCountChannels,1:artifactualDataExcludeZero.shape[1]+1]# Ignoring the first data sample
 		data = data/1e-6
 
@@ -176,12 +180,12 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 						 ch_types= ['eeg']*len(channelNamesForInterpolation), 
 						 montage= Configuration.channelLayout())
 
-		interpolateRaw = mne.io.RawArray(finalData, info)
-		interpolateRaw.info['bads'] = bad_channels # Taking all the channels
-		interpolateRaw = interpolateRaw.interpolate_bads(reset_bads = False, mode='accurate', 
+		interpolatedRaw = mne.io.RawArray(finalData, info)
+		interpolatedRaw.info['bads'] = bad_channels # Taking all the channels
+		interpolatedRaw = interpolatedRaw.interpolate_bads(reset_bads = False, mode='accurate', 
 												   origin = (0.0,0.0,0.04))
 		# After interpolation of the bad channels, taking only the channel-data
-		interpolatedData = interpolateRaw.pick(picks = bad_channels).get_data()
+		interpolatedData = interpolatedRaw.pick(picks = bad_channels).get_data()
 
 
 	return backfittedData, interpolatedData
@@ -196,7 +200,7 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, interpola
 
 	#Function to detect artifacts
 	raw, ch_names_combined, artifactualData, finalEmgData2 = detectArtifacts(filepath)
-
+	raw2 = raw.copy()
 
 	# Format for EEG micrsotate analysis as well as randomization statistics     
 	# rawWithArtifactsDetected = formatForMicrostate(raw, dataWithArtifactsDetected, ch_names_combined)
@@ -204,12 +208,14 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, interpola
 	
 	
 	# Function to remove the EMG artifacts
-	backfittedData, interpolatedData  = removeArtifacts(raw, finalEmgData2Raw, artifactualData, trainDataPath, backfit, 
+	backfittedData, interpolatedData  = removeArtifacts(raw2, finalEmgData2Raw, artifactualData, trainDataPath, backfit, 
 											     interpolate)
 
 	
 	# Data recontruction
-	finalEmgFreeData = np.concatenate((backfitData.T,interpolatedData.T),axis = 0)
+	finalEmgFreeData = np.concatenate((backfittedData.T,interpolatedData.T),axis = 0)
+	finalEmgFreeData = finalEmgFreeData.T
+	
 	info = mne.create_info(ch_names=Configuration.channelList(), sfreq= raw.info['sfreq'], ch_types='eeg', 
 	montage = Configuration.channelLayout())
 	finalEmgFreeRaw = mne.io.RawArray(finalEmgFreeData*1e-6, info)
@@ -228,20 +234,27 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, interpola
 	# Display of all the results and generation of report of the analysis
 	if visualize:
 		# Plotting the preprocessed raw data
+		print('Plotting the preprocessed raw EEG data')
 		raw.plot(duration = 0.5)
 
 		# Plotting the artifactual data
+		print('Plotting the EMG contaminated preprocessed raw EEG data')
 		finalEmgData2Raw.plot(duration = 0.5)
 
+
 		# Plotting the final EMG free data of the proposed method
+		print('Plotting the EMG-artifacts free EEG data')
 		finalEmgFreeRaw.plot(duration  = 0.5)
 
 		# Plotting the final EMG free data obtained from the method ICA with MARA
+		print('Plotting the final EMG free data using ICA with MARA method')
 		rawICAMARA.plot(duration = 0.5)
 
 		# Printing the data quality metrices after removal of EMG artifacts
+		
 		for key in comaprisonResults:
-			for k in comaprisonResults[key]: 
+			for k in comaprisonResults[key]:
+				print('Data quality of the artufacts free data obtained from:', comaprisonResults[key])
 				print(comaprisonResults[key][k])
 		
 

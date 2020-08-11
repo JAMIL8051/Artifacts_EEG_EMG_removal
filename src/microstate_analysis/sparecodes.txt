@@ -1,0 +1,56 @@
+#meanCorrelation = []
+
+    #for key in allMaps:
+    #    for key1 in repetitions:
+    #        meanCorrelation.append(repetitions[key1][key])
+
+    #avgMeanCorrelation = {}
+
+    #n_maps = 3
+    #i = 0
+    #j = Configuration.repetitionsCount()
+    #while n_maps < Configuration.numberOfCluster():
+    #    temp = []
+    #    temp.append(meanCorrelation[j*i:j*(i+1)])
+    #    avgMeanCorrelation[str(n_maps)] = temp
+    #    n_maps += 1
+    #    i += 1
+
+    #for key in avgMeanCorrelation:
+    #    avgMeanCorrelation[key] = np.mean(np.asarray(avgMeanCorrelation[key]))
+
+    #optimalCluster = -1
+    #maxAvgMeanCorr = -1 
+
+    #for key in avgMeanCorrelation:
+    #    if avgMeanCorrelation[key] > maxAvgMeanCorr:
+    #        maxAvgMeanCorr = avgMeanCorrelation[key]
+    #        optimalCluster = int(key)
+
+    #repetitions= {}
+    # repetitions start here:
+
+
+
+
+repetitionTimes = [20,25,30,35,40,45,50,55, 60, 65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,160,165,170,175,180,185,190,195,200,205,210,215,220,225,230,235,240,245,250,255,260,265,270,275,280,285,290,295,300,305,310,315,320,325,330,335,340,345,350]
+
+for r in range(len(repetitionTimes)):
+    idx = repetitionTimes[r] 
+    avgMeanCorrelation = meanCorrelations[:idx,:].mean(axis = 0)
+    optimalCluster = 0
+               
+    # Here the index 0,1  represent cluster no. 3,4 s respectively and so on. As a result, 3 has been added again. 
+    for i in range(len(avgMeanCorrelation)):
+        if avgMeanCorrelation[i] == max(avgMeanCorrelation):
+            optimalCluster = i + 3
+    print('For no. of repetitions: ',repetitionTimes[r],'\nThe optimal-no. of cluster: ',optimalCluster)
+    #fig, ax = plt.subplots(nrows = len(repetitionTimes), ncols =len(repetitionTimes), figsize=(10,5))
+    #ax[r,r].plot(avgMeanCorrelation,"go")
+    #ax[r,r].set_title('Graph of meancorrelations vs number of clusters for: '+str(idx)+' times')
+    plt.figure(figsize=(10,5))
+    plt.plot(avgMeanCorrelation,"go")
+    plt.title('Graph of meancorrelations vs number of clusters for: '+str(idx)+' times')
+    plt.xlabel('Range of clusters:from 3 to 20 starting from 0 ending at 18')
+    plt.ylabel('Meancorrelations')
+    plt.show()

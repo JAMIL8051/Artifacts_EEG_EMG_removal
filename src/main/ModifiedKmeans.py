@@ -115,18 +115,18 @@ import pandas as pd
 #    return ch_names, np.array(locs)
 
 
-def findstr(s, L):
-    """Find string in list of strings, returns indices.
+#def findstr(s, L):
+#    """Find string in list of strings, returns indices.
 
-    Args:
-        s: query string
-        L: list of strings to search
-    Returns:
-        x: list of indices where s is found in L
-    """
+#    Args:
+#        s: query string
+#        L: list of strings to search
+#    Returns:
+#        x: list of indices where s is found in L
+#    """
 
-    x = [i for i, l in enumerate(L) if (l==s)]
-    return x
+#    x = [i for i, l in enumerate(L) if (l==s)]
+#    return x
 
 
 def locmax(x):
@@ -144,77 +144,77 @@ def locmax(x):
     return m
 
 
-def bp_filter(data, f_lo,f_hi, fs):
-    """Digital 6th order butterworth band pass filter
-     Args:
-        data: numpy.array, time along axis 0
-        (f_lo, f_hi): frequency band to extract [Hz]
-        fs: sampling frequency [Hz]
-    Returns:
-        data_filt: band-pass filtered data, same shape as data
-    """
-    data_filt = np.zeros_like(data)
-    f_ny = fs/2.  # Nyquist frequency
-    b_lo = f_lo/f_ny  # normalized frequency [0..1]
-    b_hi = f_hi/f_ny  # normalized frequency [0..1]
-    p_lp = {"N":6, "Wn":b_hi, "btype":"lowpass", "analog":False, "output":"ba"}
-    p_hp = {"N":6, "Wn":b_lo, "btype":"highpass", "analog":False, "output":"ba"}
-    bp_b1, bp_a1 = butter(**p_lp)
-    bp_b2, bp_a2 = butter(**p_hp)
-    data_filt = filtfilt(bp_b1, bp_a1, data, axis=0)
-    data_filt = filtfilt(bp_b2, bp_a2, data_filt, axis=0)
-    return data_filt
+#def bp_filter(data, f_lo,f_hi, fs):
+#    """Digital 6th order butterworth band pass filter
+#     Args:
+#        data: numpy.array, time along axis 0
+#        (f_lo, f_hi): frequency band to extract [Hz]
+#        fs: sampling frequency [Hz]
+#    Returns:
+#        data_filt: band-pass filtered data, same shape as data
+#    """
+#    data_filt = np.zeros_like(data)
+#    f_ny = fs/2.  # Nyquist frequency
+#    b_lo = f_lo/f_ny  # normalized frequency [0..1]
+#    b_hi = f_hi/f_ny  # normalized frequency [0..1]
+#    p_lp = {"N":6, "Wn":b_hi, "btype":"lowpass", "analog":False, "output":"ba"}
+#    p_hp = {"N":6, "Wn":b_lo, "btype":"highpass", "analog":False, "output":"ba"}
+#    bp_b1, bp_a1 = butter(**p_lp)
+#    bp_b2, bp_a2 = butter(**p_hp)
+#    data_filt = filtfilt(bp_b1, bp_a1, data, axis=0)
+#    data_filt = filtfilt(bp_b2, bp_a2, data_filt, axis=0)
+#    return data_filt
 
 
-def topo(data, n_grid=64):
-    """Interpolate EEG topography onto a regularly spaced grid
+#def topo(data, n_grid=64):
+#    """Interpolate EEG topography onto a regularly spaced grid
 
-    Args:
-        data: numpy.array, size = number of EEG channels
-        n_grid: integer, interpolate to n_grid x n_grid array, default=64
-    Returns:
-        data_interpol: cubic interpolation of EEG topography, n_grid x n_grid
-                       contains nan values
-    """
-    channels, locs = read_xyz('cap.xyz')
-    n_channels = len(channels)
-    #locs /= np.sqrt(np.sum(locs**2,axis=1))[:,np.newaxis]
-    locs /= np.linalg.norm(locs, 2, axis=1, keepdims=True)
-    c = findstr('Cz', channels)[0]
-    # print 'center electrode for interpolation: ' + channels[c]
-    #w = np.sqrt(np.sum((locs-locs[c])**2, axis=1))
-    w = np.linalg.norm(locs - locs[c], 2, axis=1)
-    #arclen = 2*np.arcsin(w/2)
-    arclen = np.arcsin(w / 2. * np.sqrt(4. - w * w))
-    it1 = locs[:,0] - locs[c][0]
-    it2 = locs[:,1] - locs[c][1]
-    mapped = map(complex, it1, it2)
-    listMapped = list(mapped)
-    phi = np.angle(listMapped)
-    X = arclen * np.real(np.exp(1j * phi))
-    Y = arclen * np.imag(np.exp(1j * phi))
-    r = max([max(X),max(Y)])
-    Xi = np.linspace(-r,r,n_grid)
-    Yi = np.linspace(-r,r,n_grid)
-    data_ip = griddata((X, Y), data, (Xi[None,:], Yi[:,None]), method='cubic')
-    return data_ip
+#    Args:
+#        data: numpy.array, size = number of EEG channels
+#        n_grid: integer, interpolate to n_grid x n_grid array, default=64
+#    Returns:
+#        data_interpol: cubic interpolation of EEG topography, n_grid x n_grid
+#                       contains nan values
+#    """
+#    channels, locs = read_xyz('cap.xyz')
+#    n_channels = len(channels)
+#    #locs /= np.sqrt(np.sum(locs**2,axis=1))[:,np.newaxis]
+#    locs /= np.linalg.norm(locs, 2, axis=1, keepdims=True)
+#    c = findstr('Cz', channels)[0]
+#    # print 'center electrode for interpolation: ' + channels[c]
+#    #w = np.sqrt(np.sum((locs-locs[c])**2, axis=1))
+#    w = np.linalg.norm(locs - locs[c], 2, axis=1)
+#    #arclen = 2*np.arcsin(w/2)
+#    arclen = np.arcsin(w / 2. * np.sqrt(4. - w * w))
+#    it1 = locs[:,0] - locs[c][0]
+#    it2 = locs[:,1] - locs[c][1]
+#    mapped = map(complex, it1, it2)
+#    listMapped = list(mapped)
+#    phi = np.angle(listMapped)
+#    X = arclen * np.real(np.exp(1j * phi))
+#    Y = arclen * np.imag(np.exp(1j * phi))
+#    r = max([max(X),max(Y)])
+#    Xi = np.linspace(-r,r,n_grid)
+#    Yi = np.linspace(-r,r,n_grid)
+#    data_ip = griddata((X, Y), data, (Xi[None,:], Yi[:,None]), method='cubic')
+#    return data_ip
 
 
-def eeg2map(data):
-    """Interpolate and normalize EEG topography, ignoring not a number(nan) values
+#def eeg2map(data):
+#    """Interpolate and normalize EEG topography, ignoring not a number(nan) values
 
-    Args:
-        data: numpy.array, size = number of EEG channels
-        n_grid: interger, interpolate to n_grid x n_grid array, default=64
-    Returns:
-        top_norm: normalized topography, n_grid x n_grid
-    """
-    n_grid = 64
-    top = topo(data, n_grid)
-    mn = np.nanmin(top)
-    mx = np.nanmax(top)
-    top_norm = (top-mn)/(mx-mn)
-    return top_norm
+#    Args:
+#        data: numpy.array, size = number of EEG channels
+#        n_grid: interger, interpolate to n_grid x n_grid array, default=64
+#    Returns:
+#        top_norm: normalized topography, n_grid x n_grid
+#    """
+#    n_grid = 64
+#    top = topo(data, n_grid)
+#    mn = np.nanmin(top)
+#    mx = np.nanmax(top)
+#    top_norm = (top-mn)/(mx-mn)
+#    return top_norm
 
 
 

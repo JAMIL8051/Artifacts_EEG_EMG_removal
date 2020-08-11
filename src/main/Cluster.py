@@ -47,7 +47,7 @@ def calcMeanCorrelation(testData, maps):
     return meanCorrelation
 
 
-def meanCorrelation(subjectWiseData, subjects):
+def findMeanCorrelation(subjectWiseData, subjects):
     randSubjects = random.sample(subjects,len(subjects))
    
     
@@ -63,8 +63,8 @@ def meanCorrelation(subjectWiseData, subjects):
     meanTrainData = trainData.mean(axis = 0)
     # Just unit conversion: From volt to microvolt
     meanTrainData = meanTrainData/1e-6
-    meanTrainData = meanTrainData - meanTrainData.mean(axis = 0, keepdims = True)
     meanTrainData = meanTrainData[1:,:]
+    
     meanTestData = testData.mean(axis = 0)
     meanTestData = meanTestData/1e-6
     
@@ -94,8 +94,8 @@ def findOptimalCluster(subjectWiseData, subjectConditionWiseData):
     for i in range(Configuration.repetitionsCount()):
         shuffledSubjectWiseData = []
 
-        meanCorrelationSubjectWise = meanCorrelation(subjectWiseData, subjects) 
-        meanCorrelationCondtionWise = meanCorrelation(subjectConditionWiseData, subjects) 
+        meanCorrelationSubjectWise = findMeanCorrelation(subjectWiseData, subjects) 
+        meanCorrelationCondtionWise = findMeanCorrelation(subjectConditionWiseData, subjects) 
 
         resultantCorrelation = (meanCorrelationSubjectWise + meanCorrelationCondtionWise)/2
         meanCorrelations[i] = resultantCorrelation
@@ -114,35 +114,5 @@ def findOptimalCluster(subjectWiseData, subjectConditionWiseData):
     return optimalCluster
     
 
-    #meanCorrelation = []
-
-    #for key in allMaps:
-    #    for key1 in repetitions:
-    #        meanCorrelation.append(repetitions[key1][key])
-
-    #avgMeanCorrelation = {}
-
-    #n_maps = 3
-    #i = 0
-    #j = Configuration.repetitionsCount()
-    #while n_maps < Configuration.numberOfCluster():
-    #    temp = []
-    #    temp.append(meanCorrelation[j*i:j*(i+1)])
-    #    avgMeanCorrelation[str(n_maps)] = temp
-    #    n_maps += 1
-    #    i += 1
-
-    #for key in avgMeanCorrelation:
-    #    avgMeanCorrelation[key] = np.mean(np.asarray(avgMeanCorrelation[key]))
-
-    #optimalCluster = -1
-    #maxAvgMeanCorr = -1 
-
-    #for key in avgMeanCorrelation:
-    #    if avgMeanCorrelation[key] > maxAvgMeanCorr:
-    #        maxAvgMeanCorr = avgMeanCorrelation[key]
-    #        optimalCluster = int(key)
-
-    #repetitions= {}
-    # repetitions start here:
+    
 

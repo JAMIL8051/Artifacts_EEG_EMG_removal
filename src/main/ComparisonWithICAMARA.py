@@ -15,7 +15,7 @@ def get_raw_data_file_path():
 
 #Loading the raw data
 def load_raw_data(filepath):
-    raw = mne.io.read_raw_eeglab(filepath) 
+    raw = mne.io.read_raw_eeglab(filepath, preload = True) 
     return raw
 
 # Main function to load
@@ -41,7 +41,7 @@ def calculateQualtiyMeasures(data,thresholdValues):
     channelHighVarience = []
     
     
-    valTime = data.std(axis =0, keepdims =True)
+    valTime = data.std(axis = 0, keepdims =True)
     valChannel = data.std(axis = 1,keepdims = True)
     
     for k in range(len(thresholdValues)):
@@ -71,6 +71,7 @@ def calculateQualtiyMeasures(data,thresholdValues):
 
 
 def compareWithIcaMara(finalEmgRaw, visualize = False):
+    print('Give the artifacts free file in set format obtained using ICA_MARA in MATLAB')
     raw = preprocess_raw_data()
     # Loading the interested channels only
     channelsOptimalCluster = Configuration.channelList()
@@ -80,7 +81,7 @@ def compareWithIcaMara(finalEmgRaw, visualize = False):
     if visualize:
         plt.figure()
         ax = plt.axes()
-        finalEmgFreeRaw.plot_psd(fmin=45.0, fmax= 70.0, tmin=0.0, tmax=200.0, proj=False, n_fft= 512*2, ax =ax, 
+        finalEmgRaw.plot_psd(fmin=45.0, fmax= 70.0, tmin=0.0, tmax=200.0, proj=False, n_fft= 512*2, ax =ax, 
                              n_overlap= 0, picks = channelsOptimalCluster , show =False, average = False, 
                              xscale='linear',dB=False, estimate='amplitude')
         ax.set_title(Configuration.setAsdPlotTittle())
@@ -97,20 +98,22 @@ def compareWithIcaMara(finalEmgRaw, visualize = False):
     nd = Noisydata(rawICAMARA)
     nd.find_all_bads(ransac = False)
     bads = nd.get_bads(verbose=True)
+    print('PREP analysis results of artifact free data obtained from ICA_MARA')
 
     # Comparison with PREP analysis for the proposed method data
     nd = Noisydata(finalEmgRaw)
     nd.find_all_bads()
     bads = nd.get_bads(verbose=True)
-
+    print('PREP analysis of artifact free data obtained from EEG_MS+RS')
+    
     # Comparison with the data quality metrics
     # The proposed method:
     thresholdValues = Configuration.callThresholdValues()
-    overallHighAmplitude, timeHighVarience, channelHighVarience = calculateQualtiyMeasures(data = finalEmgFreeRaw.get_data(),thresholdValues)
+    overallHighAmplitude, timeHighVarience, channelHighVarience = calculateQualtiyMeasures(data = finalEmgRaw.get_data(),thresholdValues = thresholdValues)
                                                                                             
     
     # The method:ICA with MARA
-    overallHighAmplitude1, timeHighVarience1, channelHighVarience1 = calculateQualtiyMeasures(data = rawICAMARA.get_data(), thresholdValues)
+    overallHighAmplitude1, timeHighVarience1, channelHighVarience1 = calculateQualtiyMeasures(data = rawICAMARA.get_data(), thresholdValues = thresholdValues)
 
     method1DataQualityMetrics = {}
     method1DataQualityMetrics['OHV'] = overallHighAmplitude 
