@@ -54,3 +54,19 @@ for r in range(len(repetitionTimes)):
     plt.xlabel('Range of clusters:from 3 to 20 starting from 0 ending at 18')
     plt.ylabel('Meancorrelations')
     plt.show()
+	
+	
+# Function to merge subject data "condition: contaminated" wise
+#def concatenateSubjectData(subjectConditionWiseData):
+#	combinedData, countOfColumns, countChannels = [],[],[]
+#	for key in subjectConditionWiseData:
+#		combinedData.append(subjectConditionWiseData[key])
+#		countOfColumns.append(subjectConditionWiseData[key].shape[1])
+#		countChannels.append(subjectConditionWiseData[key].shape[0])
+	
+#	concatenatedData = np.zeros((len(combinedData),dtype='float')
+#	for i in range(len(combinedData)):
+#		concatenatedData[i] = combinedData[i].ravel('C')
+	
+#	concatenatedData = np.asarray(concatenatedData)
+#	return  concatenatedData	

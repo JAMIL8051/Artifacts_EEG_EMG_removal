@@ -88,7 +88,7 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 
 	# First step: Find optimal number of microstate classes
 	# Doing the microstate analysis to generate the optimal number of microstate classes
-	# optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
+	optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
 	
 	
 	# Conduct randomized statistics with help of quantifiers of microstate classes or maps to generate the 

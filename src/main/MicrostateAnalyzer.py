@@ -10,22 +10,6 @@ import glob
 import mne
 
 
-# Function to merge subject data "condition: contaminated" wise
-#def concatenateSubjectData(subjectConditionWiseData):
-#	combinedData, countOfColumns, countChannels = [],[],[]
-#	for key in subjectConditionWiseData:
-#		combinedData.append(subjectConditionWiseData[key])
-#		countOfColumns.append(subjectConditionWiseData[key].shape[1])
-#		countChannels.append(subjectConditionWiseData[key].shape[0])
-	
-#	concatenatedData = np.zeros((len(combinedData),dtype='float')
-#	for i in range(len(combinedData)):
-#		concatenatedData[i] = combinedData[i].ravel('C')
-	
-#	concatenatedData = np.asarray(concatenatedData)
-#	return  concatenatedData
-
-
 #Channels location file reader function
 def read_xyz(filename):
 #    """Read EEG electrode locations in xyz format
@@ -47,6 +31,7 @@ def read_xyz(filename):
             else:
                 l = None
     return ch_names, np.array(locs)
+
 
 def plotMicrostateMaps(maps, filename):
     channels, locs = read_xyz(filename)
@@ -109,12 +94,12 @@ def loadData(filePath):
 
 # Function to conduct EEG microstate analysis on the  raw data for finding optimal number microstate classes or maps 
 def analyzeMicrostate(trainDataPath):
-    #if trainDataPath == '':
-    #    trainDataPath = Configuration.defaultTrainDataFolder()
+    if trainDataPath == '':
+        trainDataPath = Configuration.defaultTrainDataFolder()
     
     subjectWiseData, subjectConditionWiseData = loadData(trainDataPath)
     optimalCluster = Cluster.findOptimalCluster(subjectWiseData, subjectConditionWiseData)
-    optimalCluster = 10
+    # optimalCluster = 10
     data = subjectWiseData.mean(axis = 0).T
     # Zoom in of the data in to micro volt from volts
     data = data/1e-06
@@ -124,10 +109,10 @@ def analyzeMicrostate(trainDataPath):
     optimalMaps, labels, gfp_peaks, gev, cv = ModifiedKmeans.kmeans(data, n_maps=10, n_runs = 50, maxerr = 1e-6, 
                                                       maxiter = 1000, doplot = False)
 
-    savetxt('optimalMaps.csv', optimalMaps, delimiter=',')
+    
     filename = Configuration.channelLocationFile()
     plotMicrostateMaps(optimalMaps, filename)
-    print('Stop')
+    
     return optimalMaps, optimalCluster
     
 

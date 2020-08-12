@@ -25,7 +25,7 @@ The region variable shows the names of the regions in the brain which are highly
 signals due to frontalis and temporalis scalp muscle 
 """
 def defaultTrainDataFolder():
-    return  "C:/Users/J_CHOWD/Desktop/EEG_microstate_analysis_papers/TestDataN-BackLucas/*.bdf"
+    return  "C:/projects/eeg_microstates/src/main/TrainingDataSet/*.bdf"
 
 
 def channels():
@@ -69,10 +69,10 @@ Thomas Koenig • Maria Stein • Matthias Grieder •
 Mara Kottlow. Brain Topogr (2014) 27:72–83 DOI 10.1007/s10548-013-0310-1
 """    
 def repetitionsCount():
-    return 5
+    return 350
 
 def channelLocationFile():
-    return "C:/projects/eeg_microstates/src/channel_location_files/ChannelLocationsForOptimalCluster.xyz"
+    return "C:/projects/eeg_microstates/src/main/channel_location_files/ChannelLocationsForOptimalCluster.xyz"
 
 
 # Two condition of data: Contaminated data detected through power analysis and 
