@@ -5,7 +5,7 @@ import ModifiedKmeans
 import Cluster
 import numpy as np
 import matplotlib.pyplot as plt
-from numpy import savetxt
+
 import glob
 import mne
 
@@ -92,27 +92,25 @@ def loadData(filePath):
     return subjectData, subjectConditionWiseData
 
 
-# Function to conduct EEG microstate analysis on the  raw data for finding optimal number microstate classes or maps 
+# Function to conduct EEG microstate analysis on the  raw data for finding optimal number microstate 
+# classes or maps and subsequnt plotting 
 def analyzeMicrostate(trainDataPath):
-    if trainDataPath == '':
-        trainDataPath = Configuration.defaultTrainDataFolder()
-    
+
     subjectWiseData, subjectConditionWiseData = loadData(trainDataPath)
     optimalCluster = Cluster.findOptimalCluster(subjectWiseData, subjectConditionWiseData)
-    # optimalCluster = 10
-    data = subjectWiseData.mean(axis = 0).T
-    # Zoom in of the data in to micro volt from volts
-    data = data/1e-06
-    # Removing the first time sample from all channels. The first sample is very close to zero. We can ignore that.
-    data = data[1:,:]
-
-    optimalMaps, labels, gfp_peaks, gev, cv = ModifiedKmeans.kmeans(data, n_maps=10, n_runs = 50, maxerr = 1e-6, 
-                                                      maxiter = 1000, doplot = False)
+    n_maps = optimalCluster
+    
+    # Zoom in of the data in to micro volt from volts and removing the first time sample from all channels. 
+    # The first sample is very close to zero. We can ignore that.
+    data = subjectWiseData.mean(axis = 0).T[1:,:]/1e-06
+    
+    gfp, gfp2, gfp_peaks, meanValue = ModifiedKmeans.findGfpPeaks(data)
+    
+    optimalMaps, labels, gfp_peaks, gev, cv = ModifiedKmeans.modifiedKmeans(data, gfp, gfp2, gfp_peaks, meanValue,
+                                                                n_maps, n_runs = 50)
 
     
-    filename = Configuration.channelLocationFile()
-    plotMicrostateMaps(optimalMaps, filename)
-    
+        
     return optimalMaps, optimalCluster
     
 

@@ -49,10 +49,7 @@ def calcMeanCorrelation(testData, maps):
 
 def findMeanCorrelation(subjectWiseData, subjects):
     randSubjects = random.sample(subjects,len(subjects))
-   
-    
     shuffleData = subjectWiseData[randSubjects] 
-    
     
     # 50% training data
     trainData = shuffleData[:shuffleData.shape[0]//2]
@@ -60,21 +57,20 @@ def findMeanCorrelation(subjectWiseData, subjects):
     # 50% test data
     testData = shuffleData[shuffleData.shape[0]//2:]
     
-    meanTrainData = trainData.mean(axis = 0)
     # Just unit conversion: From volt to microvolt
-    meanTrainData = meanTrainData/1e-6
-    meanTrainData = meanTrainData[1:,:]
-    
-    meanTestData = testData.mean(axis = 0)
-    meanTestData = meanTestData/1e-6
+    meanTrainData = trainData.mean(axis = 0).T[1:,:]/1e-06
+
+    gfp, gfp2, gfp_peaks, meanValue = ModifiedKmeans.findGfpPeaks(meanTrainData)
+
+    meanTestData = testData.mean(axis = 0).T[1:,:]/1e-6
     
     n_maps = 3
     
     meanCorrelation = np.zeros((Configuration.numberOfCluster()-3),dtype = 'float')
 
     while n_maps<Configuration.numberOfCluster():    
-        maps, labels, gfp_peaks, gev, cv = ModifiedKmeans.kmeans(meanTrainData.T, n_maps, n_runs = 50, maxerr = 1e-6, 
-                                                  maxiter = 1000, doplot = False)
+        maps, labels, gfp_peaks, gev, cv = ModifiedKmeans.modifiedKmeans(meanTrainData, gfp, gfp2, gfp_peaks, meanValue, 
+                                                                 n_maps, n_runs = 50)
           
         meanCorrelation[n_maps-3] = calcMeanCorrelation(meanTestData, maps)
         
@@ -89,7 +85,7 @@ def findOptimalCluster(subjectWiseData, subjectConditionWiseData):
     # We always start from the number of clusters = 3. So 3 is deducted to maintain the range. 
     meanCorrelations = np.zeros((Configuration.repetitionsCount(),(Configuration.numberOfCluster()-3)), dtype='float')
     
-    # For loop ends for 250 times with randomly shuffling 4 subjects data with 50% train data and 50% test
+    # For loop ends for 350 times with randomly shuffling 4 subjects data with 50% train data and 50% test
     # data
     for i in range(Configuration.repetitionsCount()):
         shuffledSubjectWiseData = []
@@ -104,12 +100,12 @@ def findOptimalCluster(subjectWiseData, subjectConditionWiseData):
     avgMeanCorrelation = meanCorrelations.mean(axis = 0)
     
     optimalCluster = 0
-    # Here the index 0,1  represent cluster no. 3,4 s respectively and so on. As a result, 3 has been added again. 
+    # Here the index 0,1  represent cluster no. 3,4 respectively and so on. As a result, 3 has been added again. 
     for i in range(len(avgMeanCorrelation)):
         if avgMeanCorrelation[i] == max(avgMeanCorrelation):
             optimalCluster = i + 3
 
-    print('Check done')
+    
 
     return optimalCluster
     

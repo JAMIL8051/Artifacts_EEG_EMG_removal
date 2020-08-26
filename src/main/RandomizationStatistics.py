@@ -37,17 +37,21 @@ def findEffect(conta_data, non_conta_data, optimalNumberOfCluster, return_maps =
 
     # BDF data so a simple conversion of volt to microvolt
     conta_data = conta_data/1e-6 
-    non_conta_data = non_conta_data/1e-6
+    gfp, gfp2, gfp_peaks, meanValue = ModifiedKmeans.findGfpPeaks(conta_data)
     
+    non_conta_data = non_conta_data/1e-6
+    gfp_, gfp2_, gfp_peaks_, meanValue_ = ModifiedKmeans.findGfpPeaks(non_conta_data)
+    
+
     n_maps = optimalNumberOfCluster
     
-    conta_maps, conta_labels, gfp_peaks,gev,cv = ModifiedKmeans.kmeans(conta_data, n_maps, n_runs= 10, 
-                                                     maxerr=1e-6, maxiter=1000, doplot = False)
+    conta_maps, conta_labels, gfp_peaks,gev,cv = ModifiedKmeans.modifiedKmeans(conta_data, gfp, gfp2, gfp_peaks, 
+                                                                       meanValue, n_maps, n_runs= 10)
     
     
-    non_conta_maps, non_conta_labels,gfp_peaks,gev,cv = ModifiedKmeans.kmeans(non_conta_data, n_maps, n_runs= 10, 
-                                                             maxerr=1e-6, maxiter=1000, 
-                                                             doplot = False)
+    non_conta_maps, non_conta_labels, gfp_peaks_, gev_, cv_ = ModifiedKmeans.modifiedKmeans(non_conta_data, gfp_, gfp2_, 
+                                                                              gfp_peaks_, meanValue_,n_maps, 
+                                                                              n_runs = 10)
     
     # Calculatin the microstate qunatifiers
     condition_0 = MicrostateQuantifiers.quantifyMicrostates(conta_maps, conta_labels)
@@ -66,20 +70,22 @@ def findEffect(conta_data, non_conta_data, optimalNumberOfCluster, return_maps =
         effectResults[parameters[i]+'-effect'] = result
     if return_maps:
         return effectResults, parameters, conta_maps, non_conta_maps
+
     return effectResults, parameters 
     
     
 #Small twick to find the observed effect
 def findObservedEffect(raw, rawWithArtifactsDetected, optimalNumberOfCluster):
     conta_data, times = rawWithArtifactsDetected.get_data(return_times = True)
-    conta_data = conta_data
+    
+    #conta_data = conta_data
 
     #In case the raw object fails to work! Use the line below
     non_conta_data = raw.pick(picks = Configuration.channelList()).get_data()
     time_samples = len(times)-(len(times) % 1024)
     # +1 as the first sample beling very close to zero is ignored. This is dataset specific. User can change anytime
     non_conta_data = non_conta_data[:,1:time_samples+1]
-    conta_data = conta_data[:,1:time_samples+1] 
+    conta_data = conta_data[:,:time_samples] 
     observedEffectResults, parameters, conta_maps, non_conta_maps = findEffect(conta_data.T, non_conta_data.T, 
                                                                                optimalNumberOfCluster, 
                                                                                return_maps = True)
@@ -137,7 +143,7 @@ def findLabel(observedEffect, optimalNumberOfCluster, randEffectSize):
     
     microstateClassProbability = microstateClass/randEffectSize.shape[0]
     
-    print('The probabilities of the 10 microstate classes:\n', microstateClassProbability)
+    print('The probabilities of 10 microstate classes:\n', microstateClassProbability)
     
     sigDiffMapLabel = []
     sigNotDiffMapLabel = []
@@ -214,7 +220,7 @@ def randomizationStat(raw, rawWithArtifactsDetected, artifactualData, optimalNum
     labels[parameters[2]+'notSignificant'] = sigNotDiffMapLabel_2
     
 
-    return raw_non_conta_data, labels, parameters, conta_maps, non_conta_maps 
+    return labels, parameters, conta_maps, non_conta_maps 
 
 
 

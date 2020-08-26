@@ -33,7 +33,7 @@ def main():
     print('Initializing the detection and removal process')
     trainDataPath = Configuration.defaultTrainDataFolder()
     results = EegArtifactAnalyzer.detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, 
-                                                             interpolate= True, comparison = True, visualize = True)
+                                                             interpolate= True, comparison = True, visualize = False)
 
     
     return None

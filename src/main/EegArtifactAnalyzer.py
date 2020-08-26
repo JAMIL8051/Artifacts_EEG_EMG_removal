@@ -88,12 +88,16 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 
 	# First step: Find optimal number of microstate classes
 	# Doing the microstate analysis to generate the optimal number of microstate classes
+	print('Initializing EEG microstate analysis')
 	optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
 	
 	
 	# Conduct randomized statistics with help of quantifiers of microstate classes or maps to generate the 
 	# significantly different maps with labels for backfit and significantly not different ones for interpolation
-	raw_non_conta_data, labels, parameters, conta_maps, non_conta_maps = RandomizationStatistics.randomizationStat(raw,rawWithArtifactsDetected, artifactualData, optimalNumberOfCluster = 10)
+	# raw_non_conta_data, labels, parameters, conta_maps, non_conta_maps = RandomizationStatistics.randomizationStat(raw,rawWithArtifactsDetected, artifactualData, optimalNumberOfCluster = 10)
+	
+	print('Initializing Randomization-statistical analysis')
+	labels, parameters, conta_maps, non_conta_maps = RandomizationStatistics.randomizationStat(raw,rawWithArtifactsDetected, artifactualData, optimalNumberOfCluster)
 
 	# Separting the labels parameter into two other ones: sigDiffmaplabel and interpolateLabel for the 
 	# backfit and interpolation part.
@@ -108,8 +112,8 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 	# Configuration file. Second, the conta_maps, non_conta_maps parameters are fitted to the instantaneous data 
 	# and on the gfp peaks of the data. For three micrsotate-quantifiers the laebls are computed and the final 
 	# results are obtained.
-	  
 	if backfit:
+		print('Initializing fit-back process')  
 		backfitRaw = raw2.copy() 
 		data, times = backfitRaw.pick(picks = Configuration.channelList()).get_data(return_times = True)
 		data = data[:,1:]# Removing the first time-sample of all the channels as it is very very close to zero 
@@ -150,6 +154,7 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 
 	# Function for interpolation of artifactual data obtained using the contaminated maps with SigNotDiffMap labels
 	if interpolate:
+		print('Initializing the Interpolation process')  
 		artifactualDataExcludeZero, residueDataExcludeZero = Interpolate.interpolate(interpolateDataExcludeZero, 
 																			   conta_maps, interpolateLabel)
 		bad_channels = Configuration.channelList()
@@ -188,7 +193,7 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 		interpolatedData = interpolatedRaw.pick(picks = bad_channels).get_data()
 
 
-	return backfittedData, interpolatedData
+	return backfittedData, interpolatedData, optimalMaps
 
 
 #Function to detect EMG contaminated EEG segments after standard preprocessing of the data and 
@@ -208,23 +213,25 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, interpola
 	
 	
 	# Function to remove the EMG artifacts
-	backfittedData, interpolatedData  = removeArtifacts(raw2, finalEmgData2Raw, artifactualData, trainDataPath, backfit, 
+	backfittedData, interpolatedData, optimalMaps  = removeArtifacts(raw2, finalEmgData2Raw, artifactualData, trainDataPath, backfit, 
 											     interpolate)
 
 	
 	# Data recontruction
+	print('Initializing data-reconstruction process')  
 	finalEmgFreeData = np.concatenate((backfittedData.T,interpolatedData.T),axis = 0)
 	finalEmgFreeData = finalEmgFreeData.T
 	
 	info = mne.create_info(ch_names=Configuration.channelList(), sfreq= raw.info['sfreq'], ch_types='eeg', 
 	montage = Configuration.channelLayout())
 	finalEmgFreeRaw = mne.io.RawArray(finalEmgFreeData*1e-6, info)
-	
+	print('End of the data analysis')
 	#End of data analysis and the algorithm----------------------------------------
 
 	# For standard comparison with other method like: ICA+MARA
 	if comparison:
-
+		print('Initializing Comparison process with ICA+MARA')  
+	
 		# 1st step comparing with the simulated EEG data
 		#resultsWithSimEEG = validateWithSimulatedData(finalEmgFreeRaw)
 
@@ -240,6 +247,11 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, interpola
 		# Plotting the artifactual data
 		print('Plotting the EMG contaminated preprocessed raw EEG data')
 		finalEmgData2Raw.plot(duration = 0.5)
+
+		# Plotting the Optimal EEG microstate maps or classes
+		filename = Configuration.channelLocationFile()
+		MicrostateAnalyzer.plotMicrostateMaps(optimalMaps, filename)
+		
 
 
 		# Plotting the final EMG free data of the proposed method
