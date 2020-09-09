@@ -9,6 +9,7 @@ import Interpolate
 import ComparisonWithICAMARA
 import numpy as np
 import mne
+import matplotlib.pyplot as plt
 
  
 # This script start from the function: "detectAndRemoveEegArtifact". This function detects the EMG artifacts due to 
@@ -52,9 +53,9 @@ def formatForMicrostate(raw, dataWithArtifactsDetected, ch_names_combined):
 #using the power analysis in the 45-70Hz frequency band
 def detectArtifacts(filepath):
 	raw = preprocessor.preprocessRawData(filepath)
-	artifactualData, finalEmgData1, ch_names_combined = PowerAnalysis.identifyArtifacts(raw)
+	artifactualData, finalEmgData2, finalEmgFreeData2, ch_names_combined = PowerAnalysis.identifyArtifacts(raw)
 	
-	return raw, ch_names_combined, artifactualData, finalEmgData1
+	return raw, finalEmgData2, finalEmgFreeData2, ch_names_combined, artifactualData
 
 
 # Please start from the bottom to top reading approach. As in python sub-functions inside a big function needs to be on the top
@@ -81,15 +82,15 @@ def separateLabels(labels):
 
 
 
-def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPath, backfit=True, 
+def removeArtifacts(raw, rawWithArtifactsDetected, rawWithOutArtifacts, artifactualData, trainDataPath, backfit=True, 
 					interpolate = True):
 
 	raw2 = raw.copy()
 
 	# First step: Find optimal number of microstate classes
 	# Doing the microstate analysis to generate the optimal number of microstate classes
-	print('Initializing EEG microstate analysis')
-	optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
+	#print('Initializing EEG microstate analysis')
+	#optimalMaps, optimalNumberOfCluster = MicrostateAnalyzer.analyzeMicrostate(trainDataPath)
 	
 	
 	# Conduct randomized statistics with help of quantifiers of microstate classes or maps to generate the 
@@ -97,16 +98,13 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 	# raw_non_conta_data, labels, parameters, conta_maps, non_conta_maps = RandomizationStatistics.randomizationStat(raw,rawWithArtifactsDetected, artifactualData, optimalNumberOfCluster = 10)
 	
 	print('Initializing Randomization-statistical analysis')
-	labels, parameters, conta_maps, non_conta_maps = RandomizationStatistics.randomizationStat(raw,rawWithArtifactsDetected, artifactualData, optimalNumberOfCluster)
+	labels, parameters, conta_maps, non_conta_maps = RandomizationStatistics.randomizationStat(rawWithOutArtifacts, rawWithArtifactsDetected, 
+																							artifactualData, optimalNumberOfCluster = 10)
 
 	# Separting the labels parameter into two other ones: sigDiffmaplabel and interpolateLabel for the 
 	# backfit and interpolation part.
 	sigDiffMapLabel, interpolateLabel = separateLabels(labels)
 
-
-
-
-	
 	# Here the backfit process is done in two ways. First, the whole individual raw single-subject data is taken
 	# from the raw object. This data is 16 by 128000 ndarray. 16 channels represents the channelList in the 
 	# Configuration file. Second, the conta_maps, non_conta_maps parameters are fitted to the instantaneous data 
@@ -193,7 +191,8 @@ def removeArtifacts(raw, rawWithArtifactsDetected, artifactualData, trainDataPat
 		interpolatedData = interpolatedRaw.pick(picks = bad_channels).get_data()
 
 
-	return backfittedData, interpolatedData, optimalMaps
+	#return backfittedData, interpolatedData, optimalMaps
+	return backfittedData, interpolatedData
 
 
 #Function to detect EMG contaminated EEG segments after standard preprocessing of the data and 
@@ -204,17 +203,30 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, interpola
 							   validation = False, comparison = False, visualize = False):
 
 	#Function to detect artifacts
-	raw, ch_names_combined, artifactualData, finalEmgData2 = detectArtifacts(filepath)
+	raw, finalEmgData2, finalEmgFreeData2, ch_names_combined, artifactualData = detectArtifacts(filepath)
 	raw2 = raw.copy()
 
 	# Format for EEG micrsotate analysis as well as randomization statistics     
 	# rawWithArtifactsDetected = formatForMicrostate(raw, dataWithArtifactsDetected, ch_names_combined)
 	finalEmgData2Raw = formatForMicrostate(raw, finalEmgData2, list(set(ch_names_combined)))
+	finalEmgFreeData2Raw = formatForMicrostate(raw, finalEmgFreeData2, list(set(ch_names_combined)))
+	
+
+	finalEmgData2Raw.set_montage('biosemi64')
+	plt.figure()
+	ax = plt.axes()
+	finalEmgData2Raw.plot_psd(fmin=45.0, fmax= 70.0, tmin=0.0,tmax= 4.0, proj=False, n_fft= 512*2, 
+             ax =ax, n_overlap= 0, show = False, average = False,
+                        xscale='linear', dB = False, estimate='power')
+	ax.set_title('EMG contaminated EEG data')
+
+
 	
 	
 	# Function to remove the EMG artifacts
-	backfittedData, interpolatedData, optimalMaps  = removeArtifacts(raw2, finalEmgData2Raw, artifactualData, trainDataPath, backfit, 
-											     interpolate)
+	#backfittedData, interpolatedData, optimalMaps  = removeArtifacts(raw2, finalEmgData2Raw, finalEmgFreeData2Raw,artifactualData, trainDataPath, backfit, interpolate)
+	backfittedData, interpolatedData = removeArtifacts(raw2, finalEmgData2Raw, finalEmgFreeData2Raw,
+																  artifactualData, trainDataPath, backfit, interpolate)
 
 	
 	# Data recontruction
@@ -266,7 +278,7 @@ def detectAndRemoveEegArtifact(filepath, trainDataPath, backfit= True, interpola
 		
 		for key in comaprisonResults:
 			for k in comaprisonResults[key]:
-				print('Data quality of the artufacts free data obtained from:', comaprisonResults[key])
+				print('Data quality of the artifacts free data obtained from:', comaprisonResults[key])
 				print(comaprisonResults[key][k])
 		
 

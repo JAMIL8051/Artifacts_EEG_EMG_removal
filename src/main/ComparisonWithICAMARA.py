@@ -98,13 +98,13 @@ def compareWithIcaMara(finalEmgRaw, visualize = False):
     nd = Noisydata(rawICAMARA)
     nd.find_all_bads(ransac = False)
     bads = nd.get_bads(verbose=True)
-    print('PREP analysis results of artifact free data obtained from ICA_MARA')
+    print('PREP analysis results of artifact free data obtained from ICA_MARA', bads)
 
     # Comparison with PREP analysis for the proposed method data
     nd = Noisydata(finalEmgRaw)
     nd.find_all_bads()
-    bads = nd.get_bads(verbose=True)
-    print('PREP analysis of artifact free data obtained from EEG_MS+RS')
+    proposedBads = nd.get_bads(verbose=True)
+    print('PREP analysis of artifact free data obtained from EEG_MS+RS', proposedBads)
     
     # Comparison with the data quality metrics
     # The proposed method:

@@ -102,12 +102,12 @@ def descibeInterpolate():
 
 # Sets the threshold values for cheking the data quality. See details in the following paper.
 """
-    Automagic: Standardized preprocessing of big EEG data
-    Andreas Pedroni 1, Amirreza Bahreini 2, Nicolas Langer 3
+    Automagic: Standardized preprocessing of big EEG data Andreas Pedroni 1, Amirreza Bahreini 2, Nicolas Langer 3
 """
 def callThresholdValues():
     return [10,20,30,40,50,60,70,80,90]
 
+# Function to set title for plotting the power spectral desity
 def setAsdPlotTittle():
     return 'Amplitude Spectral density in the 45-70 Hz band for all channels of interest'
 

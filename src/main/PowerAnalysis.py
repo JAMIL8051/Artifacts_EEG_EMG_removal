@@ -64,13 +64,17 @@ def detectContaminatedData(raw, channelNames, threshold_val):
 	data = raw.get_data()
 	#Allocating memory for the channel and epoch indices array for the primary channels data			
 	contaminatedData = np.zeros((len(channelNames),100,1024),dtype='float')
+	emgFreeData = np.zeros((len(channelNames),100,1024),dtype='float')
 
 	for i in range(len(channelNames)):
 		for epoch in range(100):
 			if power[i,epoch] > threshold_val:
 				contaminatedData[i,epoch,:] = data[i, (1024*epoch)+1:(1024*(epoch+1))+1]
+			else:
+				emgFreeData[i,epoch,:] = data[i, (1024*epoch)+1:(1024*(epoch+1))+1]
+
 	
-	return contaminatedData
+	return contaminatedData, emgFreeData
 
 
 # The main function to identify the EMG contaminated data:
@@ -96,16 +100,20 @@ def identifyArtifacts(raw):
 	#finalEmgData = np.zeros((len(channelNamesPrimary), len(ch_names_list[0]), 100, 1024), dtype = 'float')
 	#-----------------
 	finalEmgData1 = {}
+	finalEmgFreeData1 = {}
 	#------------------
 	for i in range(len(channelNamesPrimary)):
 		primaryChannelName = channelNamesPrimary[i]
 		for epoch in range(100):
 			if power[i, epoch]>threshold[i]:
 				#--------------------------------------
-				finalEmgData1[channelNamesPrimary[i]] = detectContaminatedData(raw, channelNamesNoRepeat[primaryChannelName], 
+				contaminatedData, emgFreeData = detectContaminatedData(raw, channelNamesNoRepeat[primaryChannelName], 
 																   threshold[i])
+				finalEmgData1[channelNamesPrimary[i]] = contaminatedData 
+				finalEmgFreeData1[channelNamesPrimary[i]] = emgFreeData 
+				
 				#--------------------------------------
-				contaminatedData = detectContaminatedData(raw, channelNamesMap[primaryChannelName], threshold[i]) 
+				#contaminatedData = detectContaminatedData(raw, channelNamesMap[primaryChannelName], threshold[i]) 
 				
 
 				# finalEmgData[i,:,:,:] = contaminatedData
@@ -116,12 +124,20 @@ def identifyArtifacts(raw):
 	#dataWithArtifactsDetected = finalEmgData
 	#----------------------------------------------------
 	finalEmgData2 = []
+	
 	for key in finalEmgData1:
 		finalEmgData2.append(finalEmgData1[key])
 	finalEmgData2 = np.row_stack(np.asarray(finalEmgData2))
+
+	finalEmgFreeData2 = []
+	for key in finalEmgFreeData1:
+		finalEmgFreeData2.append(finalEmgFreeData1[key])
+	finalEmgFreeData2 = np.row_stack(np.asarray(finalEmgFreeData2))
+
+
 	#------------------------------------------------------
 	#return dataWithArtifactsDetected, ch_names_combined, artifactualData, finalEmgData2 
-	return artifactualData, finalEmgData2, ch_names_combined 
+	return artifactualData, finalEmgData2, finalEmgFreeData2, ch_names_combined 
 
 
 
